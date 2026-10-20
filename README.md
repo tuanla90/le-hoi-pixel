@@ -90,7 +90,7 @@ Vòng 2, 3 và 5 đo bằng bot chạy trong chính game (gọi `__step`), vòng
 
 ## Chơi online (mỗi người một máy, ở đâu cũng được)
 
-Khi game chạy bằng `server.js` (trên laptop hoặc trên Render), màn hình chính có thêm **🌐 Chơi online** và **🏆 Bảng xếp hạng**.
+Khi game chạy bằng `server.js` (trên laptop, Railway hoặc Render), màn hình chính có thêm **🌐 Chơi online** và **🏆 Bảng xếp hạng**.
 
 **Cách chơi**
 1. Một người bấm **🌐 Chơi online → ✨ Tạo phòng mới**, nhập tên. Người tạo phòng là **chủ phòng 👑**.
@@ -117,6 +117,16 @@ Khi game chạy bằng `server.js` (trên laptop hoặc trên Render), màn hìn
 - Trên điện thoại cầm dọc, thẻ chữ vẫn khá nhỏ; xoay ngang hoặc dùng máy tính sẽ đọc rõ hơn.
 - Bảng xếp hạng tin kết quả do máy chủ phòng gửi lên, chưa có chống gian lận.
 
+### Đưa lên mạng bằng Railway
+1. Vào [railway.com](https://railway.com) và đăng nhập bằng GitHub. Chọn **New Project → Deploy from GitHub repo → `le-hoi-pixel`** và cho Railway quyền đọc repo nếu được hỏi.
+2. Railway tự nhận ra dự án Node (`package.json`), rồi chạy `npm start`, tức `node server.js`. Không cần lệnh build hay biến môi trường nào: máy chủ đọc cổng `PORT` của Railway và tự tắt chế độ tay cầm cùng Wi‑Fi khi thấy biến `RAILWAY_ENVIRONMENT_NAME`.
+3. Mở dịch vụ → **Settings → Networking → Generate Domain**. Railway hỏi cổng thì nhập cổng hiện trong log (`Deploy Logs` có dòng “đang chạy (chế độ online) trên cổng …”, thường là `8080`). Bạn sẽ có địa chỉ dạng `https://le-hoi-pixel-production.up.railway.app`.
+4. **Giữ bảng xếp hạng qua các lần deploy:** trong project bấm **+ Create → Volume**, gắn vào dịch vụ, mount path `/data`. Máy chủ tự ghi `leaderboard.json` vào volume (biến `RAILWAY_VOLUME_MOUNT_PATH`). Không gắn volume thì mỗi lần deploy lại bảng sẽ trống. Có thể dùng Upstash Redis như phần Render bên dưới thay cho volume.
+5. Mỗi lần `git push` lên nhánh `main`, Railway tự deploy lại.
+6. **(Không bắt buộc)** Healthcheck: **Settings → Deploy → Healthcheck Path** = `/api/ping`.
+
+Railway không cho dịch vụ ngủ như Render nên không phải chờ khởi động, nhưng không có gói miễn phí lâu dài: tài khoản mới có tín dụng dùng thử, sau đó gói Hobby khoảng 5 USD/tháng. Game này rất nhẹ: một tiến trình Node, không có cơ sở dữ liệu.
+
 ### Đưa lên mạng bằng Render (miễn phí)
 1. Tạo kho GitHub (riêng tư cũng được) và đẩy toàn bộ thư mục game lên. Thư mục `data/` đã nằm trong `.gitignore`.
 2. Vào [render.com](https://render.com) và đăng nhập bằng GitHub. Chọn **New → Blueprint**, chọn kho vừa tạo; Render đọc `render.yaml` và tạo dịch vụ web `node server.js`. Cách khác: **New → Web Service**, Start Command `node server.js`, thêm biến môi trường `PUBLIC=1`.
@@ -127,7 +137,7 @@ Khi game chạy bằng `server.js` (trên laptop hoặc trên Render), màn hìn
    - Không có hai biến này thì bảng lưu vào `data/leaderboard.json`, dùng được khi chạy trên laptop.
 5. Gói miễn phí **ngủ sau 15 phút không có ai**; người vào đầu tiên phải chờ khoảng 30–60 giây để máy chủ thức dậy. Trước sự kiện nên mở trang trước vài phút.
 
-Trên Render (hoặc khi đặt `PUBLIC=1`), chế độ tay cầm cùng Wi‑Fi (`pad.html`, mã QR LAN) tự tắt vì không dùng được qua internet. Chạy trên laptop thì cả hai chế độ đều có.
+Trên Railway, Render (hoặc khi đặt `PUBLIC=1`), chế độ tay cầm cùng Wi‑Fi (`pad.html`, mã QR LAN) tự tắt vì không dùng được qua internet. Chạy trên laptop thì cả hai chế độ đều có.
 
 **Thử trên máy mình:** chạy `node server.js`, mở `http://localhost:8020` ở hai cửa sổ hoặc trình duyệt khác nhau, một bên tạo phòng, bên kia vào bằng mã. Hai tab cùng một trình duyệt dùng chung mã người chơi, nên nên dùng hai trình duyệt khác nhau hoặc một cửa sổ ẩn danh.
 

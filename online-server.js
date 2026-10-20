@@ -7,7 +7,7 @@
 // forwards. Browsers report a hash of their game state now and then; the server flags any mismatch.
 //
 // Leaderboard: the room host's browser posts the final result; entries live in memory and are saved to a JSON file
-// (DATA_DIR) or, when UPSTASH_REDIS_REST_URL/TOKEN are set, to Upstash Redis (survives restarts on free hosting).
+// (DATA_DIR, or a Railway Volume) or, when UPSTASH_REDIS_REST_URL/TOKEN are set, to Upstash Redis (survives restarts on free hosting).
 const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const { wsAccept, wsSend, wsReader } = require('./ws-lite.js');
 
@@ -133,7 +133,8 @@ setInterval(() => {
 }, FRAME_MS);
 
 // ------------------------------------------------------------------ leaderboard storage
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+// Railway: attach a Volume and the leaderboard file lands on it automatically (RAILWAY_VOLUME_MOUNT_PATH)
+const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'data');
 const FILE = path.join(DATA_DIR, 'leaderboard.json');
 const UP_URL = process.env.UPSTASH_REDIS_REST_URL, UP_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN, UP_KEY = 'tiemhoa:leaderboard';
 let board = [];

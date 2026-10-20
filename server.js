@@ -1,14 +1,15 @@
 // Tiệm Hoa 20/10 — game server (no dependencies, Node 18+).
 //   • LAN party: relays phone controller presses to the big screen over WebSocket (/ws)
 //   • Online: rooms anyone can join from anywhere + leaderboard (/room, /api/*) — see online-server.js
-//   node server.js          → http://localhost:8020 ; on Render (or PUBLIC=1) only the online part is enabled
+//   node server.js          → http://localhost:8020 ; on Render/Railway (or PUBLIC=1) only the online part is enabled
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto'), os = require('os');
 const { wsAccept, wsSend, wsReader } = require('./ws-lite.js');
 const online = require('./online-server.js');
 
 const PORT = +process.env.PORT || 8020;
 const ROOT = __dirname;
-const PUBLIC = !!process.env.RENDER || process.env.PUBLIC === '1'; // hosted on the internet: no LAN phone relay
+// hosted on the internet (Render, Railway, or PUBLIC=1): no LAN phone relay
+const PUBLIC = !!process.env.RENDER || !!process.env.RAILWAY_ENVIRONMENT_NAME || process.env.PUBLIC === '1';
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.json': 'application/json', '.ico': 'image/x-icon', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 const PRIVATE = new Set(['server.js', 'online-server.js', 'ws-lite.js', 'package.json', 'render.yaml']);
 
@@ -83,8 +84,9 @@ server.on('upgrade', (req, sock) => {
 
 online.loadBoard();
 server.listen(PORT, '0.0.0.0', () => {
-  const ips = PUBLIC ? [] : lanIPs();
-  console.log('\n  🌸 Tiệm Hoa 20/10 đang chạy' + (PUBLIC ? ' (chế độ online)' : ''));
+  if (PUBLIC) { console.log(`\n  🌸 Tiệm Hoa 20/10 đang chạy (chế độ online) trên cổng ${PORT} — phòng online + bảng xếp hạng sẵn sàng\n`); return; }
+  const ips = lanIPs();
+  console.log('\n  🌸 Tiệm Hoa 20/10 đang chạy');
   console.log(`  Màn hình lớn:  http://localhost:${PORT}`);
   ips.forEach(ip => console.log(`  Điện thoại:    http://${ip.address}:${PORT}   (${ip.name})`));
   if (!ips.length) console.log('  ⚠ Không thấy mạng LAN/Wi-Fi — điện thoại sẽ không vào được.');
