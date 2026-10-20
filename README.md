@@ -102,6 +102,9 @@ core/                      lõi dùng chung, không nhắc tới dịp lễ nào
   audio.js, detmath.js     âm thanh WebAudio; toán và ngẫu nhiên tất định cho lockstep
 mechanics/                 khuôn luật chơi dùng lại được, chủ đề chỉ đưa vào tên, chữ và hình
   grid-care.js             lưới 4×4: hai người đưa khung, một người dùng đúng dụng cụ (20/10 vòng 1, Halloween vòng 1)
+  carry-balance.js         cả nhóm bê một thứ chao đảo qua màn có chướng ngại, một người giữ thăng bằng (20/10 vòng 2)
+  auto-drive.js            xe tự chạy trên đường cong: hai người lái, một người phanh ở đèn đỏ và chỗ giao hàng (20/10 vòng 3)
+  rhythm-color.js          nhịp điệu 3 màu, màu pha cần bấm cùng lúc, nốt dài chuyền tay (20/10 vòng 4)
   beam-guard.js            ba đèn pin xoay đuổi thứ bò tới từ bóng tối, ma to cần nhiều đèn (Halloween vòng 2)
   assembly-line.js         dây chuyền 3 khâu phục vụ khách (20/10 vòng 5, Halloween vòng 3)
 themes/
@@ -111,7 +114,7 @@ themes/
     meta.js                phần nhẹ, điện thoại cũng tải: tên, 3 vai, nút bấm từng vòng
     card.js                vẽ thiệp cá nhân cuối ván
     sprites.js, world.js   pixel art vẽ bằng code
-    scenes/                màn chính, 5 vòng chơi, màn tổng kết (garden.js, shop.js chỉ là bộ áo của khuôn)
+    scenes/                màn chính, 5 vòng chơi (mỗi vòng là bộ áo của một khuôn), màn tổng kết
   halloween/               cùng cấu trúc: 3 vòng, đều là bộ áo của khuôn trong mechanics/
     sprites.html           xem toàn bộ sprite khi chỉnh đồ hoạ
     thiep-moi.html         thiệp mời sự kiện
@@ -121,7 +124,7 @@ themes/
 
 1. Chép thư mục `themes/20-10` thành `themes/<id>` (ví dụ `themes/noel`). Đổi tên, vai và nút bấm trong `meta.js`, danh sách vòng trong `theme.js`.
 2. Thêm một mục vào `themes/themes.json`: `id`, `name` và `rounds` (id + nhãn từng vòng, đúng thứ tự trong `theme.js`). Máy chủ đọc danh sách này lúc khởi động (để ghi chủ đề cho phòng online và nhận điểm lên bảng xếp hạng), nên thêm chủ đề xong thì khởi động lại `server.js`.
-3. Vẽ lại `sprites.js` và mẫu thiệp trong `card.js`. Vòng nào dùng khuôn trong `mechanics/` thì chỉ cần viết bộ áo: tên món, chữ, hình (xem `themes/20-10/scenes/shop.js` cho khuôn dây chuyền). Các vòng khác viết lại màn trong `scenes/`.
+3. Vẽ lại `sprites.js` và mẫu thiệp trong `card.js`. Mỗi vòng chọn một khuôn trong `mechanics/` và chỉ cần viết bộ áo: tên món, chữ, hình (mẫu: 5 vòng trong `themes/20-10/scenes/`, 3 vòng trong `themes/halloween/scenes/`). Chú thích đầu mỗi khuôn liệt kê những gì bộ áo phải có. Vòng thể loại mới thì viết khuôn mới.
 4. Mở `/?theme=<id>` để chơi thử. Kỷ lục, độ khó và tên đội của mỗi chủ đề được lưu riêng (`store` trong `theme.js`, mặc định `lhp_<id>_`).
 
 Lõi luôn coi vai thứ ba (số 2) là đội trưởng: người giữ vai này được đặt tên đội trên điện thoại.
