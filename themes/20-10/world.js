@@ -1,4 +1,4 @@
-import { C, makeCanvas, rng, drawAt } from './gfx.js';
+import { C, makeCanvas, rng, drawAt } from '../../core/gfx.js';
 import * as S from './sprites.js';
 
 // painted grass field with tufts, tiny flowers and darker patches

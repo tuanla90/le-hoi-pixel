@@ -1,12 +1,17 @@
-// Role buttons shared by the LAN phone controller (pad.html) and online play (js/online.js).
-// Per round: what each role does and its buttons (k = the key code the game reads, l = big label, s = caption).
+// Tiệm Hoa 20/10 — the light part of the theme, shared by the big screen (theme.js), the LAN phone controller
+// (pad.html) and online play: names, the three roles, and each round's phone buttons. No sprites here, so phones load fast.
+export const INFO = {
+  id: '20-10', name: 'Tiệm Hoa 20/10', shopName: 'Tiệm Hoa Ba Chị Em',
+  cardName: 'Thiệp 20/10', cardFile: 'thiep-20-10', teamExample: 'Hoa Hướng Dương', joinIcon: '🌸',
+};
+// c / cd: button colour and its shade (phones, lobby) · ink: the name colour on cards · desc: what the role is when no round is picked
 export const ROLES = [
-  { name: 'Đào', paint: 'Sơn đỏ', icon: '🌸', c: '#ff7aa2', cd: '#d9507e' },
-  { name: 'Mai', paint: 'Sơn vàng', icon: '🌼', c: '#ffcf3a', cd: '#d79a1e' },
-  { name: 'Lan', paint: 'Sơn xanh dương', icon: '💠', c: '#4aa3ff', cd: '#2f72c9' },
+  { name: 'Đào', desc: 'Sơn đỏ', icon: '🌸', c: '#ff7aa2', cd: '#d9507e', ink: '#e0507e' },
+  { name: 'Mai', desc: 'Sơn vàng', icon: '🌼', c: '#ffcf3a', cd: '#d79a1e', ink: '#e0a92a' },
+  { name: 'Lan', desc: 'Sơn xanh dương', icon: '💠', c: '#4aa3ff', cd: '#2f72c9', ink: '#3f86cf' },
 ];
 // per round: what each role does (shown when picking) and its buttons (k = key code the big screen reads)
-export const ROUNDS = {
+export const CONTROLS = {
   garden: { title: 'Vòng 1 · Trồng cây', roles: [
     { d: 'Đưa khung lên / xuống', col: 1, b: [{ k: 'ArrowUp', l: '▲', s: 'Khung lên' }, { k: 'ArrowDown', l: '▼', s: 'Khung xuống' }] },
     { d: 'Đưa khung trái / phải', b: [{ k: 'ArrowLeft', l: '◀', s: 'Khung trái' }, { k: 'ArrowRight', l: '▶', s: 'Khung phải' }] },

@@ -1,10 +1,14 @@
-import { register, game, go, input, K, el, img, uiRoot, W, H, cheer, bestKey, SHOP_NAME, DIFF_MULT, onTeam } from '../main.js';
-import { C, makeCanvas, drawAt, rng, Particles } from '../gfx.js';
+import { register, game, go, input, K, el, img, uiRoot, W, H, cheer, bestKey, DIFF_MULT, onTeam } from '../../../core/main.js';
+import { C, makeCanvas, drawAt, rng, Particles } from '../../../core/gfx.js';
 import * as S from '../sprites.js';
-import * as A from '../audio.js';
-import { ROUNDS, starsHTML, starsFor } from '../round.js';
-import { openLobby, openTeamDialog, esc } from '../lobby.js';
-import { net } from '../net.js';
+import * as A from '../../../core/audio.js';
+import { starsHTML, starsFor } from '../../../core/round.js';
+import { theme, storeKey } from '../../../core/theme.js';
+import { openLobby, openTeamDialog, esc } from '../../../core/lobby.js';
+import { net } from '../../../core/net.js';
+import { INFO } from '../meta.js';
+
+const SHOP_NAME = INFO.shopName;
 
 // background shared with the finale
 export function skyScene(seed = 4) {
@@ -55,7 +59,7 @@ export default function () {
       },
       renderMenu() {
         uiRoot.innerHTML = '';
-        let best = 0; try { best = +localStorage.getItem('thoa_best_final') || 0; } catch (e) { /* ignore */ }
+        let best = 0; try { best = +localStorage.getItem(storeKey('best_final')) || 0; } catch (e) { /* ignore */ }
         const root = el(`<div class="title-ui"></div>`); uiRoot.appendChild(root);
         root.innerHTML = `
           <div class="shop-sign" style="left:calc(var(--u)*260);top:calc(var(--u)*108);width:calc(var(--u)*140);height:calc(var(--u)*19);font-size:calc(var(--u)*10)">${SHOP_NAME}</div>
@@ -63,7 +67,7 @@ export default function () {
             <div class="sub">Ba chị em · Một cửa hàng · Năm thử thách</div>${game.team ? `<div class="team-tag">🏷️ Đội ${esc(game.team)}</div>` : ''}</div>
           ${menu === 'main' ? `
           <div class="menu pop">
-            <button class="btn big" data-a="play">🌷 Chơi cả ${ROUNDS.length} vòng <span class="key">Space</span></button>
+            <button class="btn big" data-a="play">🌷 Chơi cả ${theme.rounds.length} vòng <span class="key">Space</span></button>
             <button class="btn mint" data-a="practice">Luyện từng vòng</button>
             ${net.onlineAvailable ? `<button class="btn mint" data-a="online">🌐 ${net.online ? `Phòng ${esc(net.onlineRoom?.code || '')}` : 'Chơi online'}</button>
             <button class="btn alt" data-a="board">🏆 Bảng xếp hạng</button>` : ''}
@@ -73,7 +77,7 @@ export default function () {
             <div class="hint">Chơi một mình — bạn điều khiển cả <b>Đào</b>, <b>Mai</b> và <b>Lan</b>.<br>Chọn độ khó ở đầu mỗi vòng: 🌼 Dễ ×${DIFF_MULT.easy.toFixed(1)} · 🌷 Thường ×${DIFF_MULT.normal.toFixed(1)} · 🔥 Thử thách ×${DIFF_MULT.hard.toFixed(1)}${matchMedia('(pointer: coarse)').matches ? '<br><b style="color:#d9628f">⌨️ Game cần bàn phím — hãy mở trên máy tính nhé!</b>' : ''}${best ? `<br>Kỷ lục tổng: <b>${best}</b> điểm` : ''}</div>
           </div>` : `
           <div class="menu practice pop">
-            ${ROUNDS.map(r => { let b = 0; try { b = Math.max(...['easy', 'normal', 'hard'].map(d => +localStorage.getItem(bestKey(r.id, d)) || 0)); } catch (e) { /* ignore */ } return `<button class="btn alt round-btn" data-a="r:${r.id}"><span>${r.icon} Vòng ${r.num}: ${r.title}</span>${starsHTML(starsFor(b))}</button>`; }).join('')}
+            ${theme.rounds.map(r => { let b = 0; try { b = Math.max(...['easy', 'normal', 'hard'].map(d => +localStorage.getItem(bestKey(r.id, d)) || 0)); } catch (e) { /* ignore */ } return `<button class="btn alt round-btn" data-a="r:${r.id}"><span>${r.icon} Vòng ${r.num}: ${r.title}</span>${starsHTML(starsFor(b))}</button>`; }).join('')}
             <button class="btn" data-a="back">← Quay lại <span class="key">Esc</span></button>
           </div>`}`;
         root.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => this.act(b.dataset.a)));
@@ -85,7 +89,7 @@ export default function () {
         if (a === 'phones') openLobby();
         if (a === 'team') openTeamDialog();
         if (a === 'online') net.openOnline?.();
-        if (a === 'board') window.open('/leaderboard.html', '_blank', 'noopener');
+        if (a === 'board') window.open(`/leaderboard.html?theme=${encodeURIComponent(theme.id)}`, '_blank', 'noopener');
         if (a === 'back') { menu = 'main'; this.renderMenu(); }
         if (a === 'sound') { A.toggleMute(); this.renderMenu(); }
         if (a.startsWith('r:')) { game.campaign = null; go(a.slice(2)); }

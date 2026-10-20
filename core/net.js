@@ -1,6 +1,6 @@
 // Big-screen side of the phone controllers. Only active when the game is served by server.js
 // (plain static hosting just keeps the keyboard). The big screen is the authority on who plays which role.
-import * as S from './sprites.js';
+import { theme } from './theme.js';
 
 export const net = {
   ok: false,                 // connected to server.js (LAN phone relay)
@@ -8,7 +8,7 @@ export const net = {
   openRoom: null, sendTeam: null, localBuzz: null, showCard: null, onFinal: null, myPid: null,
   ips: [], port: 0,          // LAN addresses for the QR code
   players: new Map(),        // pid -> { name, on }
-  roles: [null, null, null], // pid holding Đào / Mai / Lan
+  roles: [null, null, null], // pid holding each of the theme's three roles
 };
 const listeners = new Set();
 export const onNet = fn => { listeners.add(fn); return () => listeners.delete(fn); };
@@ -37,6 +37,7 @@ function connect() {
 }
 const send = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
 const roleOf = pid => net.roles.indexOf(pid);
+export const CAPTAIN = 2; // the role that may name the team from its phone
 export const playerName = pid => (pid && net.players.get(pid)?.name) || 'Người chơi';
 
 function handle(m) {
@@ -46,7 +47,7 @@ function handle(m) {
   if (m.t === 'leave') {
     const pl = net.players.get(p); if (pl) pl.on = false;
     hooks.release(p);
-    const r = roleOf(p); if (r >= 0 && pl) hooks.toast(`📱 ${pl.name || 'Một bạn'} (${S.GIRLS[r].name}) mất kết nối`);
+    const r = roleOf(p); if (r >= 0 && pl) hooks.toast(`📱 ${pl.name || 'Một bạn'} (${theme.roles[r].name}) mất kết nối`);
   }
   if (m.t === 'hello') { const pl = net.players.get(p) || { on: true }; pl.name = String(m.name || '').slice(0, 14); net.players.set(p, pl); }
   if (m.t === 'pick') {
@@ -61,8 +62,8 @@ function handle(m) {
   }
   if (m.t === 'restore' && net.roles.every(r => !r)) net.roles = m.roles.map(r => r || null).slice(0, 3);
   if (m.t === 'key') { if (roleOf(p) >= 0) hooks.key(p, m.code, !!m.down, m.ts); }
-  // only the phone playing Lan may rename the team (the MC can always do it on the big screen)
-  if (m.t === 'team' && roleOf(p) === 2) { const n = hooks.setTeam(m.name); hooks.toast(n ? `✏️ ${playerName(p)} (Lan) đặt tên đội: ${n}` : `✏️ ${playerName(p)} (Lan) xoá tên đội`); }
+  // only the phone playing the third role (the team captain) may rename the team (the MC can always do it on the big screen)
+  if (m.t === 'team' && roleOf(p) === CAPTAIN) { const n = hooks.setTeam(m.name), who = `${playerName(p)} (${theme.roles[CAPTAIN].name})`; hooks.toast(n ? `✏️ ${who} đặt tên đội: ${n}` : `✏️ ${who} xoá tên đội`); }
   if (m.t === 'sync') send({ t: 'sync', to: p, c: m.c, h: performance.now() });
   if (m.t !== 'key' && m.t !== 'sync') { pushState(true); changed(); }
 }
@@ -70,12 +71,12 @@ function handle(m) {
 export function pushState(force = false) {
   if (!net.ok) return;
   const ph = hooks.phase();
-  const msg = { t: 'state', scene: ph.scene, state: ph.state, team: ph.team || '', roles: net.roles.map(pid => pid ? { pid, name: playerName(pid), on: !!net.players.get(pid)?.on } : null) };
+  const msg = { t: 'state', theme: theme.id, scene: ph.scene, state: ph.state, team: ph.team || '', roles: net.roles.map(pid => pid ? { pid, name: playerName(pid), on: !!net.players.get(pid)?.on } : null) };
   const k = JSON.stringify(msg);
   if (!force && k === lastState) return;
   lastState = k; send(msg);
 }
-// vibrate the phones of the given roles (0 Đào · 1 Mai · 2 Lan, an array, or 'all'); pattern is a navigator.vibrate() value.
+// vibrate the phones of the given roles (0 · 1 · 2, an array, or 'all'); pattern is a navigator.vibrate() value.
 // With a tag, the same cue repeats on a role at most once every `gap` seconds.
 const lastBuzz = {};
 export function buzz(who, pattern = 40, tag = '', gap = 0.6) {

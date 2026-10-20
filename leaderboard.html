@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2c1f2e">
-<title>Bảng xếp hạng · Tiệm Hoa 20/10</title>
+<title>Bảng xếp hạng · Lễ Hội Pixel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -41,21 +41,36 @@
 </head>
 <body>
 <main>
-  <header><h1>🏆 Bảng xếp hạng</h1><a href="/">🌷 Vào chơi</a></header>
-  <p class="sub">Tiệm Hoa 20/10 · điểm cao nhất của mỗi đội trong các ván online đủ 5 vòng. Độ khó tính theo mức được chọn ở nhiều vòng nhất.</p>
-  <div class="bar" id="mode"><button class="seg on" data-mode="total">Tổng 5 vòng</button><button class="seg" data-mode="rounds">Từng vòng</button></div>
+  <header><h1>🏆 Bảng xếp hạng</h1><a href="/" id="play">🎉 Vào chơi</a></header>
+  <p class="sub" id="sub">Điểm cao nhất của mỗi đội trong các ván online đủ vòng. Độ khó tính theo mức được chọn ở nhiều vòng nhất.</p>
+  <div class="bar" id="theme" hidden></div>
+  <div class="bar" id="mode"><button class="seg on" data-mode="total" id="totalBtn">Tổng các vòng</button><button class="seg" data-mode="rounds">Từng vòng</button></div>
   <div class="bar" id="diff"><button class="seg on" data-diff="all">Mọi độ khó</button><button class="seg" data-diff="easy">🌼 Dễ</button><button class="seg" data-diff="normal">🌷 Thường</button><button class="seg" data-diff="hard">🔥 Thử thách</button></div>
   <div class="bar" id="period"><button class="seg on" data-period="all">Mọi lúc</button><button class="seg" data-period="week">7 ngày qua</button></div>
   <div class="bar" id="round" hidden></div>
   <div class="card" id="out"><div class="empty">Đang tải…</div></div>
 </main>
 <script>
-const ROUNDS = [['garden', '🌱 Trồng cây'], ['carry', '🌿 Bê cây'], ['drive', '🚚 Chở cây'], ['sign', '🎨 Làm biển hiệu'], ['shop', '💐 Ngày khai trương']];
+// one board per theme (festival): ?theme=20-10; the rounds and their names come from themes/themes.json
+let ROUNDS = [];
 const DIFF = { easy: '🌼 Dễ', normal: '🌷 Thường', hard: '🔥 Thử thách' };
-const st = { mode: 'total', diff: 'all', period: 'all', round: 'garden' };
+const st = { theme: '', mode: 'total', diff: 'all', period: 'all', round: '' };
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const when = t => new Date(t).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-document.getElementById('round').innerHTML = ROUNDS.map(([id, n], i) => `<button class="seg ${i ? '' : 'on'}" data-round="${id}">${n}</button>`).join('');
+let THEMES = [];
+function useTheme(id) {
+  const t = THEMES.find(x => x.id === id) || THEMES[0]; if (!t) return;
+  st.theme = t.id; ROUNDS = t.rounds; st.round = ROUNDS[0][0];
+  history.replaceState(null, '', `?theme=${encodeURIComponent(t.id)}`);
+  document.title = `Bảng xếp hạng · ${t.name}`;
+  document.getElementById('sub').textContent = `${t.name} · điểm cao nhất của mỗi đội trong các ván online đủ ${ROUNDS.length} vòng. Độ khó tính theo mức được chọn ở nhiều vòng nhất.`;
+  document.getElementById('totalBtn').textContent = `Tổng ${ROUNDS.length} vòng`;
+  document.getElementById('play').href = `/?theme=${encodeURIComponent(t.id)}`;
+  const tb = document.getElementById('theme'); tb.hidden = THEMES.length < 2;
+  tb.innerHTML = THEMES.map(x => `<button class="seg ${x.id === t.id ? 'on' : ''}" data-theme="${esc(x.id)}">${esc(x.name)}</button>`).join('');
+  document.getElementById('round').innerHTML = ROUNDS.map(([rid, n], i) => `<button class="seg ${i ? '' : 'on'}" data-round="${esc(rid)}">${esc(n)}</button>`).join('');
+}
+document.getElementById('theme').addEventListener('click', e => { const b = e.target.closest('.seg'); if (b) { useTheme(b.dataset.theme); load(); } });
 for (const bar of ['mode', 'diff', 'period', 'round']) {
   document.getElementById(bar).addEventListener('click', e => {
     const b = e.target.closest('.seg'); if (!b) return;
@@ -69,11 +84,11 @@ async function load() {
   const out = document.getElementById('out');
   out.innerHTML = '<div class="empty">Đang tải…</div>';
   try {
-    const q = new URLSearchParams({ diff: st.diff, period: st.period });
+    const q = new URLSearchParams({ theme: st.theme, diff: st.diff, period: st.period });
     if (st.mode === 'rounds') q.set('round', st.round);
     const r = await fetch((st.mode === 'rounds' ? '/api/leaderboard/rounds?' : '/api/leaderboard?') + q, { cache: 'no-store' });
     const list = await r.json();
-    if (!list.length) { out.innerHTML = '<div class="empty">Chưa có đội nào — vào chơi một ván online đủ 5 vòng để mở hàng nhé! 🌸</div>'; return; }
+    if (!list.length) { out.innerHTML = `<div class="empty">Chưa có đội nào — vào chơi một ván online đủ ${ROUNDS.length} vòng để mở hàng nhé! 🎉</div>`; return; }
     if (st.mode === 'total') {
       out.innerHTML = `<table><thead><tr><th>#</th><th>Đội</th><th class="hide-sm">Từng vòng</th><th style="text-align:right">Điểm</th></tr></thead><tbody>${list.map(e => `
         <tr><td class="n">${e.rank}</td>
@@ -86,7 +101,9 @@ async function load() {
     }
   } catch (e) { out.innerHTML = '<div class="empty">Không tải được bảng xếp hạng. Thử lại sau nhé.</div>'; }
 }
-load();
+fetch('/themes/themes.json', { cache: 'no-cache' }).then(r => r.json()).then(list => {
+  THEMES = list; useTheme(new URLSearchParams(location.search).get('theme')); load();
+}).catch(() => { document.getElementById('out').innerHTML = '<div class="empty">Không tải được danh sách chủ đề.</div>'; });
 </script>
 </body>
 </html>

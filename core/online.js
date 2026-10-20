@@ -6,10 +6,9 @@
 // Joining late (or reconnecting) replays the room's history from the start of the current game, silently.
 import { game, online, uiRoot, el, simStep, render, resetSim, applyKey, resize, setTeam } from './main.js';
 import { withDet, seedDet } from './detmath.js';
-import { net } from './net.js';
+import { net, CAPTAIN } from './net.js';
 import { esc, openTeamDialog } from './lobby.js';
-import { ROLES, ROUNDS } from './controls.js';
-import { drawCard } from './card.js';
+import { theme } from './theme.js';
 import * as A from './audio.js';
 
 const TICK_MS = 1000 / 60;
@@ -47,8 +46,8 @@ function openOnline(prefill = '') {
     <div class="online-row"><button class="btn big" type="button" data-new>✨ Tạo phòng mới</button></div>
     <div class="online-or">— hoặc vào phòng của bạn bè —</div>
     <div class="online-row"><input class="team-input code-input" name="code" maxlength="6" placeholder="MÃ PHÒNG" value="${esc(prefill)}" autocomplete="off"><button class="btn mint" type="submit">Vào phòng</button></div>
-    <p class="online-note">Mỗi người chơi trên điện thoại hoặc máy tính của mình, ở đâu cũng được. Phòng có 3 vai Đào · Mai · Lan, người vào sau xem cùng.</p>
-    <div class="btns"><a class="btn alt" href="/leaderboard.html" target="_blank" rel="noopener">🏆 Bảng xếp hạng</a><button class="btn alt" type="button" data-x>Đóng <span class="key">Esc</span></button></div>
+    <p class="online-note">Mỗi người chơi trên điện thoại hoặc máy tính của mình, ở đâu cũng được. Phòng có 3 vai ${theme.roles.map(R => R.name).join(' · ')}, người vào sau xem cùng.</p>
+    <div class="btns"><a class="btn alt" href="${boardURL()}" target="_blank" rel="noopener">🏆 Bảng xếp hạng</a><button class="btn alt" type="button" data-x>Đóng <span class="key">Esc</span></button></div>
     <div class="online-err"></div>
   </form></div>`);
   uiRoot.appendChild(box);
@@ -70,7 +69,7 @@ function openOnline(prefill = '') {
 function connect(code, name) {
   S.name = name; S.code = code; S.closedByUs = false;
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const ws = new WebSocket(`${proto}://${location.host}/room?code=${encodeURIComponent(code)}&pid=${S.pid}&name=${encodeURIComponent(name)}`);
+  const ws = new WebSocket(`${proto}://${location.host}/room?code=${encodeURIComponent(code)}&pid=${S.pid}&name=${encodeURIComponent(name)}&theme=${encodeURIComponent(theme.id)}`);
   S.ws = ws;
   banner('Đang kết nối phòng…');
   ws.onmessage = e => handle(JSON.parse(e.data));
@@ -87,7 +86,14 @@ function handle(m) {
   if (m.t === 'err') { banner(''); toastLocal(m.msg); S.ws?.close(); return; }
   if (m.t === 'kicked') { S.closedByUs = true; banner('Phòng này đã mở ở tab khác'); return; }
   if (m.t === 'welcome') {
-    S.code = m.code; history.replaceState(null, '', `?room=${m.code}`);
+    // the room plays another festival: reload into that theme, then join again from the link
+    if (m.theme && m.theme !== theme.id) {
+      S.closedByUs = true; S.ws?.close();
+      if (new URLSearchParams(location.search).get('theme') !== m.theme) location.href = `/?theme=${encodeURIComponent(m.theme)}&room=${m.code}`;
+      else banner('Máy này không mở được chủ đề của phòng — tải lại trang thử nhé'); // the theme failed to load: never loop
+      return;
+    }
+    S.code = m.code; history.replaceState(null, '', `?theme=${encodeURIComponent(theme.id)}&room=${m.code}`);
     startGame(m.epoch, m.seed, m.ev, m.u);
     return;
   }
@@ -172,7 +178,7 @@ online.onKey = (code, down) => {
   if (!S.ready) return;
   if (code == null) { for (const c of [...S.held]) online.onKey(c, false); return; }
   if (down && code === 'KeyP') { openRoom(); return; }
-  if (down && code === 'KeyN') { if (isHost() || S.room?.roles[2] === S.pid) openTeamDialog(); return; }
+  if (down && code === 'KeyN') { if (isHost() || S.room?.roles[CAPTAIN] === S.pid) openTeamDialog(); return; }
   if (down && code === 'KeyM') { A.toggleMute(); return; }
   if (game.modal && down) return; // a panel is open on this device (releases still go through, so no key gets stuck)
   const allowed = sceneCodes(myRoles());
@@ -223,11 +229,11 @@ function buildControls(force = false) {
   if (!force && key === ctlKey) return;
   ctlKey = key;
   let bar = document.getElementById('controls');
-  const defs = ROUNDS[scene];
+  const defs = theme.controls[scene];
   if (!touch || !defs || !roles.length) { bar?.remove(); if (online.reserve || online.reserveRight) { online.reserve = online.reserveRight = 0; document.body.classList.remove('side'); resize(); } return; }
   if (!bar) { bar = el('<div id="controls"></div>'); document.body.appendChild(bar); }
   bar.innerHTML = roles.map(r => {
-    const d = defs.roles[r], R = ROLES[r];
+    const d = defs.roles[r], R = theme.roles[r];
     return `<div class="ctl-role" style="--c:${R.c};--cd:${R.cd}"><div class="ctl-name">${R.icon} ${R.name} · ${esc(d.d)}</div>
       <div class="ctl-btns">${d.b.map(b => `<button class="ctl-btn" data-k="${b.k}"><span>${b.l}</span><small>${esc(b.s)}</small></button>`).join('')}</div></div>`;
   }).join('');
@@ -263,7 +269,7 @@ function openRoom() {
 }
 function refreshRoomPanel() {
   if (!roomBox || !S.room) return;
-  const r = S.room, link = `${location.origin}/?room=${S.code}`;
+  const r = S.room, link = `${location.origin}/?theme=${encodeURIComponent(theme.id)}&room=${S.code}`;
   const qr = typeof window.qrcode === 'function' ? (() => { const q = window.qrcode(0, 'M'); q.addData(link); q.make(); return `<img class="qr" src="${q.createDataURL(6, 2)}" alt="Mã QR vào phòng">`; })() : '';
   const name = p => esc(r.players.find(x => x.pid === p)?.name || '?');
   const body = roomBox.querySelector('.room-body');
@@ -271,27 +277,27 @@ function refreshRoomPanel() {
     <div class="room-top">${qr}<div><div class="room-code">Mã phòng <b>${S.code}</b></div>
       <div class="room-link">${esc(link)}</div>
       <button class="seg" data-copy>📋 Sao chép link mời</button>
-      <div class="room-team">🏷️ Đội: <b>${esc(game.team || 'chưa đặt')}</b> ${isHost() || r.roles[2] === S.pid ? '<button class="seg" data-team>✏️ Đổi</button>' : ''}</div></div></div>
-    <div class="room-roles">${ROLES.map((R, i) => {
+      <div class="room-team">🏷️ Đội: <b>${esc(game.team || 'chưa đặt')}</b> ${isHost() || r.roles[CAPTAIN] === S.pid ? '<button class="seg" data-team>✏️ Đổi</button>' : ''}</div></div></div>
+    <div class="room-roles">${theme.roles.map((R, i) => {
       const h = r.roles[i], mine = h === S.pid;
       return `<button class="room-role ${mine ? 'mine' : ''}" data-role="${i}" style="--rc:${R.c}"><b>${R.icon} ${R.name}</b><small>${h ? name(h) + (r.players.find(x => x.pid === h)?.on ? '' : ' (vắng)') : 'Trống — chủ phòng điều khiển'}</small><span>${mine ? 'Bạn ✓ (bấm để bỏ)' : h ? '' : 'Nhận vai'}</span></button>`;
     }).join('')}</div>
     <div class="room-players">Trong phòng: ${r.players.map(p => `<span class="pl ${p.on ? '' : 'off'}">${p.pid === r.host ? '👑 ' : ''}${esc(p.name)}${p.pid === S.pid ? ' (bạn)' : ''}</span>`).join(' ')}</div>
-    <div class="room-actions">${isHost() ? '<button class="seg" data-newgame>🔄 Ván mới (về màn hình chính)</button>' : ''}<a class="seg" href="/leaderboard.html" target="_blank" rel="noopener">🏆 Bảng xếp hạng</a><button class="seg" data-leave>🚪 Rời phòng</button></div>
+    <div class="room-actions">${isHost() ? '<button class="seg" data-newgame>🔄 Ván mới (về màn hình chính)</button>' : ''}<a class="seg" href="${boardURL()}" target="_blank" rel="noopener">🏆 Bảng xếp hạng</a><button class="seg" data-leave>🚪 Rời phòng</button></div>
     <small class="room-hint">Chủ phòng 👑 điều khiển menu và thẻ. Mỗi vai bấm phím của mình${matchMedia('(pointer: coarse)').matches ? ' bằng nút dưới màn hình' : ' trên bàn phím'}; vai trống do chủ phòng điều khiển.</small>`;
   body.querySelectorAll('[data-role]').forEach(b => b.addEventListener('click', () => send({ t: 'role', role: +b.dataset.role })));
   body.querySelector('[data-copy]')?.addEventListener('click', () => { navigator.clipboard?.writeText(link).then(() => toastLocal('Đã sao chép link mời!')); });
   body.querySelector('[data-team]')?.addEventListener('click', () => { roomBox.remove(); roomBox = null; game.modal = null; openTeamDialog(openRoom); });
   body.querySelector('[data-newgame]')?.addEventListener('click', () => { if (confirm('Bắt đầu ván mới cho cả phòng?')) send({ t: 'newgame' }); });
-  body.querySelector('[data-leave]')?.addEventListener('click', () => { S.closedByUs = true; S.ws?.close(); location.href = '/'; });
+  body.querySelector('[data-leave]')?.addEventListener('click', () => { S.closedByUs = true; S.ws?.close(); location.href = `/?theme=${encodeURIComponent(theme.id)}`; });
 }
 
 // ------------------------------------------------------------------ finale: personal card + leaderboard
 function showCard(card) {
   if (!card) { toastLocal('Bạn chỉ xem ván này nên chưa có thiệp — nhận một vai ở ván sau nhé!'); return; }
-  const url = drawCard(card);
-  const box = el(`<div class="lobby"><div class="card card-view pop"><img src="${url}" alt="Thiệp 20/10">
-    <div class="btns"><a class="btn mint" href="${url}" download="thiep-20-10.png">⬇️ Lưu ảnh</a><button class="btn alt" data-x>Đóng</button></div>
+  const url = theme.drawCard(card);
+  const box = el(`<div class="lobby"><div class="card card-view pop"><img src="${url}" alt="${esc(theme.cardName)}">
+    <div class="btns"><a class="btn mint" href="${url}" download="${theme.cardFile}.png">⬇️ Lưu ảnh</a><button class="btn alt" data-x>Đóng</button></div>
     <small>Điện thoại: nhấn giữ vào ảnh để lưu.</small></div></div>`);
   uiRoot.appendChild(box);
   box.querySelector('[data-x]').addEventListener('click', () => box.remove());
@@ -301,12 +307,13 @@ function onFinal({ scores, diffs, total, rankName, team }) {
   if (!isHost() || S.catching) return;
   const r = S.room, members = [...new Set(r.roles.filter(Boolean).map(p => r.players.find(x => x.pid === p)?.name).filter(Boolean))];
   fetch('/api/scores', { method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ room: S.code, epoch: S.epoch, game: S.gameNo, team, members, scores, diffs, total, rankName }) })
-    .then(r => r.json()).then(j => { if (j.place) toastLocal(`🏆 Đội đứng hạng #${j.place} trên bảng xếp hạng!`); else if (j.error === 'incomplete game') toastLocal('Chỉ ván đủ 5 vòng mới lên bảng xếp hạng.'); })
+    body: JSON.stringify({ theme: theme.id, room: S.code, epoch: S.epoch, game: S.gameNo, team, members, scores, diffs, total, rankName }) })
+    .then(r => r.json()).then(j => { if (j.place) toastLocal(`🏆 Đội đứng hạng #${j.place} trên bảng xếp hạng!`); else if (j.error === 'incomplete game') toastLocal(`Chỉ ván đủ ${theme.rounds.length} vòng mới lên bảng xếp hạng.`); })
     .catch(() => toastLocal('Không gửi được điểm lên bảng xếp hạng.'));
 }
 
 // ------------------------------------------------------------------ small UI helpers (outside the simulation)
+const boardURL = () => `/leaderboard.html?theme=${encodeURIComponent(theme.id)}`;
 let bannerEl = null;
 function banner(text, onClick) {
   if (!text) { bannerEl?.remove(); bannerEl = null; return; }

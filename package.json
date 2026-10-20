@@ -1,8 +1,8 @@
 {
-  "name": "tiem-hoa-20-10",
+  "name": "le-hoi-pixel",
   "version": "1.0.0",
   "private": true,
-  "description": "Tiệm Hoa 20/10 — co-op party game (LAN phones or online rooms)",
+  "description": "Lễ Hội Pixel — co-op party mini games, one theme per festival (LAN phones or online rooms)",
   "main": "server.js",
   "scripts": { "start": "node server.js" },
   "engines": { "node": ">=18" }

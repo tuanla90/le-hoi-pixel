@@ -3,29 +3,23 @@
 import { game, go, input, K, el, img, uiRoot, cheer, bestKey, DIFF_NAME, DIFF_MULT, DIFF_ICON, DIFFS, diffOf, setDiffOf, softCap, onTeam, teamTag } from './main.js';
 import { C } from './gfx.js';
 import * as A from './audio.js';
-import * as S from './sprites.js';
+import { star, starEmpty } from './ui-sprites.js';
 import { net, playerName, buzz } from './net.js';
 import { openLobby, openTeamDialog, roleChip, esc } from './lobby.js';
+import { theme } from './theme.js';
 
-export const ROUNDS = [
-  { id: 'garden', num: 1, title: 'Trồng cây', spr: () => S.plant('hong', 3) },
-  { id: 'carry', num: 2, title: 'Bê cây', spr: () => S.bigPot },
-  { id: 'drive', num: 3, title: 'Chở cây', spr: () => S.truckSide },
-  { id: 'sign', num: 4, title: 'Làm biển hiệu', spr: () => S.signPost },
-  { id: 'shop', num: 5, title: 'Ngày khai trương', spr: () => S.potBloom(12) },
-];
-// pixel-art round icons (emoji like 🪴 are missing on older Windows fonts)
-ROUNDS.forEach(r => { let c; Object.defineProperty(r, 'icon', { get: () => c || (c = img(r.spr(), 'ricon')) }); });
+// the theme's rounds, in play order (each one a scene registered under its id)
+const rounds = () => theme.rounds;
+const ava = i => img(theme.avatar(i, 'down', 0));
 
 export function starsFor(score) { return score >= 80 ? 3 : score >= 50 ? 2 : score >= 20 ? 1 : 0; }
 export function starsHTML(n, cls = '') {
-  return `<span class="stars ${cls}">${[0, 1, 2].map(i => img(i < n ? S.star : S.starEmpty, 'star' + (i < n ? ' lit' : ''))).join('')}</span>`;
+  return `<span class="stars ${cls}">${[0, 1, 2].map(i => img(i < n ? star : starEmpty, 'star' + (i < n ? ' lit' : ''))).join('')}</span>`;
 }
-const ROLE_COLORS = ['#e0507e', '#e0a92a', '#3f86cf'];
 
 export class Round {
   constructor(meta, params) {
-    this.meta = ROUNDS.find(r => r.id === meta.id); Object.assign(this, meta);
+    this.meta = rounds().find(r => r.id === meta.id); Object.assign(this, meta);
     this.params = params || {}; this.state = 'intro'; this.t = 0; this.score = 0; this.stateT = 0;
   }
   // ------------------------------------------------ lifecycle
@@ -46,8 +40,8 @@ export class Round {
     const c = game.campaign;
     const roles = this.roles.map((r, i) => `
       <div class="role">
-        <div class="role-ava">${img(S.girl(r.girl ?? i, 'down', 0))}</div>
-        <div class="role-name" style="--c:${ROLE_COLORS[r.girl ?? i]}">${S.GIRLS[r.girl ?? i].name}</div>
+        <div class="role-ava">${ava(r.girl ?? i)}</div>
+        <div class="role-name" style="--c:${theme.roles[r.girl ?? i].ink}">${theme.roles[r.girl ?? i].name}</div>
         <div class="role-act">${r.act}</div>
         <div class="role-keys">${r.keys}</div>
         <div class="role-player" data-rp="${r.girl ?? i}">${roleChip(r.girl ?? i)}</div>
@@ -56,7 +50,7 @@ export class Round {
     const seg = d => `<button class="seg ${game.diff === d ? 'on' : ''}" data-act="diff:${d}">${DIFF_ICON[d]} ${DIFF_NAME[d]} <small>×${DIFF_MULT[d].toFixed(1)}</small></button>`;
     this.card(`
       <div class="card intro pop">
-        <div class="ribbon">${c ? `Vòng ${this.meta.num}/${ROUNDS.length}` : 'Luyện tập'}${teamTag() ? ` · ${esc(teamTag())}` : ''}</div>
+        <div class="ribbon">${c ? `Vòng ${this.meta.num}/${rounds().length}` : 'Luyện tập'}${teamTag() ? ` · ${esc(teamTag())}` : ''}</div>
         <h1>${this.meta.title}</h1>
         <p class="lead">${this.desc}</p>
         <div class="roles">${roles}</div>
@@ -106,8 +100,8 @@ export class Round {
   buildHud() {
     const roles = this.roles.map((r, i) => `
       <div class="hrole" data-r="${i}">
-        ${img(S.girl(r.girl ?? i, 'down', 0))}
-        <div><b>${S.GIRLS[r.girl ?? i].name}${net.roles[r.girl ?? i] ? ` <em>· ${playerName(net.roles[r.girl ?? i]).replace(/</g, '')}</em>` : ''}</b><small>${r.short || r.act}</small></div>
+        ${ava(r.girl ?? i)}
+        <div><b>${theme.roles[r.girl ?? i].name}${net.roles[r.girl ?? i] ? ` <em>· ${playerName(net.roles[r.girl ?? i]).replace(/</g, '')}</em>` : ''}</b><small>${r.short || r.act}</small></div>
         <div class="hkeys">${r.keys}</div>
       </div>`).join('');
     this.hud = el(`
@@ -149,9 +143,9 @@ export class Round {
     this.root.innerHTML = '';
     this.demoSetup && this.demoSetup();
     const keys = this.demoKeys.map((ks, i) => `
-      <div class="dk-role" style="--c:${ROLE_COLORS[i]}">
-        ${img(S.girl(i, 'down', 0))}
-        <b>${S.GIRLS[i].name}</b>
+      <div class="dk-role" style="--c:${theme.roles[i].ink}">
+        ${ava(i)}
+        <b>${theme.roles[i].name}</b>
         <div class="dk-keys">${ks.map(([code, label]) => `<span class="dk" data-code="${code}">${label}</span>`).join('')}</div>
       </div>`).join('');
     this.root.appendChild(el(`
@@ -306,7 +300,7 @@ export class Round {
     const r = this.result; this.hud?.remove();
     if (r.stars >= 2) { A.sfx.fanfare(); cheer(10); } else A.sfx.ok();
     const msg = ['Không sao, thử lại nhé! 💪', 'Khá lắm! 🌼', 'Tuyệt vời! 🌷', 'Xuất sắc! 👑'][r.stars];
-    const isLast = game.campaign && this.meta.num === ROUNDS.length;
+    const isLast = game.campaign && this.meta.num === rounds().length;
     this.card(`
       <div class="card result pop">
         <div class="ribbon">${this.meta.icon} ${this.meta.title}${teamTag() ? ` · ${esc(teamTag())}` : ''}</div>
@@ -330,8 +324,8 @@ export class Round {
     requestAnimationFrame(tick);
   }
   next() {
-    const i = ROUNDS.findIndex(r => r.id === this.id);
-    if (i < ROUNDS.length - 1) go(ROUNDS[i + 1].id, {}); else go('final', {});
+    const list = rounds(), i = list.findIndex(r => r.id === this.id);
+    if (i < list.length - 1) go(list[i + 1].id, {}); else go('final', {});
   }
   draw(g) { this.drawWorld(g); if (this.state === 'demo') this.drawDemo(g); }
 }

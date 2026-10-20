@@ -30,8 +30,8 @@
 <canvas id="card" width="1080" height="1920"></canvas>
 <div class="bar"><button class="btn" id="dl">⬇ Tải ảnh thiệp (PNG)</button></div>
 <script type="module">
-import { C, sprite, makeCanvas, drawAt, rng } from './js/gfx.js';
-import * as S from './js/sprites.js';
+import { C, sprite, makeCanvas, drawAt, rng } from '../../core/gfx.js';
+import * as S from './sprites.js';
 
 const RAW = new URLSearchParams(location.search).has('raw');
 if (RAW) document.body.classList.add('raw');

@@ -1,4 +1,4 @@
-// Tiệm Hoa 20/10 — game server (no dependencies, Node 18+).
+// Lễ Hội Pixel — game server (no dependencies, Node 18+).
 //   • LAN party: relays phone controller presses to the big screen over WebSocket (/ws)
 //   • Online: rooms anyone can join from anywhere + leaderboard (/room, /api/*) — see online-server.js
 //   node server.js          → http://localhost:8020 ; on Render/Railway (or PUBLIC=1) only the online part is enabled
@@ -84,9 +84,9 @@ server.on('upgrade', (req, sock) => {
 
 online.loadBoard();
 server.listen(PORT, '0.0.0.0', () => {
-  if (PUBLIC) { console.log(`\n  🌸 Tiệm Hoa 20/10 đang chạy (chế độ online) trên cổng ${PORT} — phòng online + bảng xếp hạng sẵn sàng\n`); return; }
+  if (PUBLIC) { console.log(`\n  🎉 Lễ Hội Pixel đang chạy (chế độ online) trên cổng ${PORT} — phòng online + bảng xếp hạng sẵn sàng\n`); return; }
   const ips = lanIPs();
-  console.log('\n  🌸 Tiệm Hoa 20/10 đang chạy');
+  console.log('\n  🎉 Lễ Hội Pixel đang chạy');
   console.log(`  Màn hình lớn:  http://localhost:${PORT}`);
   ips.forEach(ip => console.log(`  Điện thoại:    http://${ip.address}:${PORT}   (${ip.name})`));
   if (!ips.length) console.log('  ⚠ Không thấy mạng LAN/Wi-Fi — điện thoại sẽ không vào được.');

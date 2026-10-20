@@ -1,8 +1,8 @@
-import { register, input, K, key, W, H, cheer, game } from '../main.js';
-import { C, makeCanvas, drawAt, Particles, clamp } from '../gfx.js';
+import { register, input, K, key, W, H, cheer, game } from '../../../core/main.js';
+import { C, makeCanvas, drawAt, Particles, clamp } from '../../../core/gfx.js';
 import * as S from '../sprites.js';
-import * as A from '../audio.js';
-import { Round } from '../round.js';
+import * as A from '../../../core/audio.js';
+import { Round } from '../../../core/round.js';
 import { grassField } from '../world.js';
 
 const T = 16, MW = 40, MH = 30;

@@ -1,7 +1,8 @@
 import * as A from './audio.js';
 import { C, drawAt } from './gfx.js';
-import * as S from './sprites.js';
+import { heart, img } from './ui-sprites.js';
 import { initNet, pushState } from './net.js';
+import { theme, loadTheme, storeKey } from './theme.js';
 
 export const W = 480, H = 270;
 const cv = document.getElementById('game');
@@ -87,7 +88,7 @@ export const K = {
 // ------------------------------------------------------------------ scenes & transitions
 const scenes = {};
 export function register(name, factory) { scenes[name] = factory; }
-export const game = { scene: null, sceneName: '', campaign: null, time: 0, diff: 'normal', frameWall: 0, modal: null };
+export const game = { scene: null, sceneName: '', campaign: null, time: 0, diff: 'normal', frameWall: 0, modal: null, team: '' };
 // difficulty is chosen per round ('easy' = Dễ; 'normal' = Thường, default; 'hard' = Thử thách) and remembered per browser;
 // game.diff holds the difficulty of the round currently on screen
 export const DIFFS = ['easy', 'normal', 'hard'];
@@ -97,11 +98,11 @@ export const tune = (e, n, h) => (game.diff === 'hard' ? h : game.diff === 'norm
 // online, the choice belongs to the room's simulation (identical on every browser), not to this browser's storage
 export function diffOf(id) {
   if (online.on) return (game.roomDiffs || {})[id] || 'normal';
-  try { const d = localStorage.getItem('thoa_diff_' + id); return DIFFS.includes(d) ? d : 'normal'; } catch (e) { return 'normal'; }
+  try { const d = localStorage.getItem(storeKey('diff_' + id)); return DIFFS.includes(d) ? d : 'normal'; } catch (e) { return 'normal'; }
 }
 export function setDiffOf(id, d) {
   if (online.on) { (game.roomDiffs ||= {})[id] = d; return; }
-  try { localStorage.setItem('thoa_diff_' + id, d); } catch (e) { /* ignore */ }
+  try { localStorage.setItem(storeKey('diff_' + id), d); } catch (e) { /* ignore */ }
 }
 export const DIFF_NAME = { easy: 'Dễ', normal: 'Thường', hard: 'Thử thách' };
 export const DIFF_ICON = { easy: '🌼', normal: '🌷', hard: '🔥' };
@@ -110,22 +111,21 @@ export const DIFF_MULT = { easy: 0.9, normal: 1.0, hard: 1.1 };
 // 100 is par in every round; only half of anything above par counts, so no single round can run away with the total
 export const OVERPAR = 0.5;
 export const softCap = raw => (raw <= 100 ? raw : 100 + (raw - 100) * OVERPAR);
-export const SHOP_NAME = 'Tiệm Hoa Ba Chị Em';
 // team name: set by the MC (title screen, intro card, phone lobby) or by whoever plays Lan on a phone;
 // remembered in this browser and shown on intro/result cards, the final board and every personal card
 export const TEAM_MAX = 24;
-game.team = (() => { try { return localStorage.getItem('thoa_team') || ''; } catch (e) { return ''; } })();
+const loadTeam = () => { try { return localStorage.getItem(storeKey('team')) || ''; } catch (e) { return ''; } };
 const teamListeners = new Set();
 export const onTeam = fn => { teamListeners.add(fn); return () => teamListeners.delete(fn); };
 export function setTeam(name) {
   const n = String(name || '').replace(/[<>&"]/g, '').replace(/\s+/g, ' ').trim().replace(/^đội\s+/i, '').slice(0, TEAM_MAX); // "Đội X" is shown as "Đội X", not "Đội Đội X"
-  game.team = n; if (!online.on) try { localStorage.setItem('thoa_team', n); } catch (e) { /* ignore */ }
+  game.team = n; if (!online.on) try { localStorage.setItem(storeKey('team'), n); } catch (e) { /* ignore */ }
   pushState(true); teamListeners.forEach(fn => fn());
   return n;
 }
 export const teamTag = () => (game.team ? `Đội ${game.team}` : '');
 // best scores are kept separately per difficulty
-export const bestKey = (id, d = game.diff) => 'thoa_best_' + id + ({ normal: '_th', hard: '_tt' }[d] || '');
+export const bestKey = (id, d = game.diff) => storeKey('best_' + id) + ({ normal: '_th', hard: '_tt' }[d] || '');
 let trans = null; // {t, dur, next, params, swapped}
 
 export function go(name, params = {}) {
@@ -144,9 +144,9 @@ export function start(name, params) { swap(name, params); }
 
 // ------------------------------------------------------------------ cheering crowd (audience emoji)
 const cheers = [];
-const CHEER_IMG = [S.heart, S.star, S.note, S.sparkleFlower[0]];
 export function cheer(n = 3, kind = -1) {
-  for (let i = 0; i < n; i++) cheers.push({ x: W - 14 - Math.random() * 26, y: H + 6 + Math.random() * 20, vy: -(26 + Math.random() * 18), ph: Math.random() * 6, t: 0, life: 2.4 + Math.random(), img: CHEER_IMG[kind >= 0 ? kind : (Math.random() * 4) | 0] });
+  const imgs = theme.cheers;
+  for (let i = 0; i < n; i++) cheers.push({ x: W - 14 - Math.random() * 26, y: H + 6 + Math.random() * 20, vy: -(26 + Math.random() * 18), ph: Math.random() * 6, t: 0, life: 2.4 + Math.random(), img: imgs[kind >= 0 ? kind : (Math.random() * imgs.length) | 0] });
 }
 
 // ------------------------------------------------------------------ loop
@@ -159,7 +159,7 @@ function frame(now) {
   const dt = Math.min(1 / 30, (now - last) / 1000); last = now;
   // schedule first so one bad frame can never freeze the whole game
   requestAnimationFrame(frame);
-  try { if (online.on) online.pump(now); else tick(dt); } catch (e) { console.error('[Tiệm Hoa] frame error', e); }
+  try { if (online.on) online.pump(now); else tick(dt); } catch (e) { console.error('[Lễ Hội Pixel] frame error', e); }
 }
 function tick(dt) { simStep(dt); pushState(); render(); }
 // one step of game logic. Online it runs at exactly 1/60 s inside withDet(), with `wall` = the simulation clock (ms).
@@ -200,19 +200,23 @@ export function render() {
     const k = trans.t / trans.dur, r = (k < .5 ? 1 - k * 2 : (k - .5) * 2);
     const rad = r * 300;
     g.fillStyle = C.out; g.beginPath(); g.rect(0, 0, W, H); g.arc(W / 2, H / 2, Math.max(0, rad), 0, Math.PI * 2, true); g.fill('evenodd');
-    if (rad < 70) { drawAt(g, S.heart, W / 2, H / 2, { ay: .5, sx: 3, sy: 3, alpha: 1 - rad / 70 }); }
+    if (rad < 70) { drawAt(g, heart, W / 2, H / 2, { ay: .5, sx: 3, sy: 3, alpha: 1 - rad / 70 }); }
   }
 }
 
 // ------------------------------------------------------------------ helpers for DOM UI
 export function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
 export function key(k) { return `<span class="key">${k}</span>`; }
-export function img(cv, cls = '') { return `<img class="px ${cls}" src="${S.toURL(cv, 4)}" alt="">`; }
+export { img };
 
 export async function boot() {
-  const mods = await Promise.all([import('./scenes/title.js'), import('./scenes/garden.js'), import('./scenes/carry.js'), import('./scenes/drive.js'), import('./scenes/sign.js'), import('./scenes/shop.js'), import('./scenes/final.js')]);
+  const q0 = new URLSearchParams(location.search);
+  await loadTheme(q0.get('theme')); // ?theme=20-10 picks the festival; the first one in themes/themes.json otherwise
+  document.title = theme.name;
+  game.team = loadTeam();
+  const mods = await theme.scenes();
   mods.forEach(m => m.default && m.default());
-  const q = new URLSearchParams(location.search).get('scene');
+  const q = q0.get('scene');
   start(q && scenes[q] ? q : 'title', {});
   requestAnimationFrame(frame);
   import('./online.js').then(m => m.initOnline()); // offers online rooms when the server supports them (and handles ?room= links)

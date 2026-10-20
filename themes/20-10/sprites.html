@@ -2,7 +2,7 @@
 <style>body{background:#cfe9c8;margin:0;padding:10px;font:12px sans-serif}canvas{image-rendering:pixelated}</style>
 <canvas id="c"></canvas>
 <script type="module">
-import * as S from './js/sprites.js';
+import * as S from './sprites.js';
 const list=[];
 for(let i=0;i<3;i++)for(const d of ['down','up','side'])for(let f=0;f<4;f++)list.push(S.girl(i,d,f,false));
 for(let i=0;i<3;i++)list.push(S.girl(i,'down',0,true),S.girl(i,'up',1,true),S.girl(i,'side',0,true));

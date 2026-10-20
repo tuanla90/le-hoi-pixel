@@ -1,4 +1,7 @@
-import { C, Painter, sprite, makeCanvas, rng } from './gfx.js';
+import { C, Painter, sprite, makeCanvas, rng } from '../../core/gfx.js';
+import { star4 } from '../../core/ui-sprites.js';
+// the shared UI icons, so scenes keep reaching them as S.heart, S.star, …
+export { heart, star, starEmpty, note, toURL } from '../../core/ui-sprites.js';
 
 // ---------------------------------------------------------------- girls
 export const GIRLS = [
@@ -382,7 +385,6 @@ export function shopFacade(w = 230, h = 168) {
 }
 
 // ---------------------------------------------------------------- word drawings (round 4)
-function star4(p, cx, cy, r, c) { for (let i = -r; i <= r; i++) { const w = Math.max(0, Math.round((r - Math.abs(i)) / 3)); p.rect(cx - w, cy + i, w * 2 + 1, 1, c); p.rect(cx + i, cy - w, 1, w * 2 + 1, c); } }
 const DRAW = {
   hong: p => { p.line(16, 31, 16, 14, C.greenD); p.line(17, 31, 17, 14, C.green); p.ell(11, 23, 5, 2.5, C.green); p.ell(22, 26, 5, 2.5, C.green); p.circ(16.5, 10, 8, C.red); p.circ(12, 4, 3, C.red); p.circ(21, 4, 3, C.red); p.circ(16.5, 10, 5.5, C.redD); p.circ(16.5, 10, 4.3, C.red); p.circ(16.5, 10, 2.6, C.redD); p.circ(16.5, 10, 1.4, C.red); p.px(12, 6, C.pinkL); p.px(13, 5, C.pinkL); },
   cuc: p => { p.line(16, 31, 16, 18, C.greenD); p.ell(11, 26, 5, 2, C.green); p.ell(22, 24, 4, 1.8, C.green); for (let a = 0; a < 12; a++) { const t = a * 0.5236; p.ell(16.5 + Math.cos(t) * 8.5, 12 + Math.sin(t) * 8.5, 2.2, 2.2, C.white); p.line(16.5 + Math.cos(t) * 4, 12 + Math.sin(t) * 4, 16.5 + Math.cos(t) * 10, 12 + Math.sin(t) * 10, C.white); } for (let a = 0; a < 12; a++) { const t = a * 0.5236 + .26; p.line(16.5 + Math.cos(t) * 6, 12 + Math.sin(t) * 6, 16.5 + Math.cos(t) * 9, 12 + Math.sin(t) * 9, C.lavL); } p.circ(16.5, 12, 4.2, C.yellow); p.px(15, 11, C.yellowD); p.px(18, 13, C.yellowD); p.px(16, 14, C.orange); },
@@ -416,17 +418,8 @@ export function sketchArt(key) {
   return (drawCache[k] = p.canvas());
 }
 
-// ---------------------------------------------------------------- UI / cheer icons
-export const heart = sprite(11, 10, p => { p.circ(3, 3.5, 2.8, C.pink); p.circ(8, 3.5, 2.8, C.pink); for (let y = 4; y < 9; y++) p.rect(1 + (y - 4), y, 9 - (y - 4) * 2, 1, C.pink); p.px(2, 2, C.white); });
-export const star = sprite(13, 13, p => { star4(p, 6, 6, 6, C.yellow); p.circ(6, 6, 2.6, C.yellow); p.px(5, 4, C.white); });
-export const starEmpty = sprite(13, 13, p => { star4(p, 6, 6, 6, C.grayL); p.circ(6, 6, 2.6, C.grayL); }, { outline: C.grayD });
-export const note = sprite(9, 11, p => { p.rect(5, 0, 1, 8, C.lavD); p.rect(5, 0, 3, 2, C.lavD); p.circ(3.5, 8, 2.4, C.lavD); });
+// ---------------------------------------------------------------- falling petals (title, finale)
 export const petal = [C.pink, C.pinkL, C.white, C.lavL].map(c => sprite(4, 3, p => { p.rect(1, 0, 2, 3, c); p.rect(0, 1, 4, 1, c); }, { outline: null }));
-
-export function toURL(cv, scale = 4) {
-  const big = makeCanvas(cv.width * scale, cv.height * scale, g => { g.imageSmoothingEnabled = false; g.drawImage(cv, 0, 0, cv.width * scale, cv.height * scale); });
-  return big.toDataURL();
-}
 
 export const easel = sprite(30, 40, p => {
   p.line(6, 39, 13, 2, C.brownD); p.line(7, 39, 14, 2, C.brown); p.line(23, 39, 16, 2, C.brownD); p.line(22, 39, 15, 2, C.brown);

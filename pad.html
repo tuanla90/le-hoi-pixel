@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#2c1f2e">
-<title>Tay cầm · Tiệm Hoa 20/10</title>
+<title>Tay cầm · Lễ Hội Pixel</title>
 <style>
   /* Phone controller: enter a name, pick a role before each round, then big buttons only. */
   :root { --ink: #3b2a3a; --cream: #fff6e3; --bg: #2c1f2e; --card: #ffffff14; --c: #b79ced; --cd: #8b6bd0; color-scheme: dark;
@@ -61,14 +61,25 @@
 <body>
 <header>
   <div class="ava" id="ava">🙂</div>
-  <div class="who"><b id="name">Tiệm Hoa 20/10</b><small id="sub">Tay cầm điện thoại</small></div>
+  <div class="who"><b id="name">Lễ Hội Pixel</b><small id="sub">Tay cầm điện thoại</small></div>
   <div class="dot" id="dot" title="Kết nối"></div>
 </header>
 <div class="status" id="status">Đang kết nối…</div>
 <main id="main"></main>
 <script type="module">
-import { ROLES, ROUNDS } from './js/controls.js';
-import { drawCard } from './js/card.js';
+// The big screen says which festival is on (state.theme); its roles, buttons and card come from themes/<id>/.
+let T = null, loadingTheme = '';
+async function useTheme(id) {
+  if (!/^[a-z0-9-]+$/.test(id || '') || T?.id === id || loadingTheme === id) return;
+  loadingTheme = id;
+  try {
+    const [m, c] = await Promise.all([import(`./themes/${id}/meta.js`), import(`./themes/${id}/card.js`)]);
+    T = { id, INFO: m.INFO, ROLES: m.ROLES, CONTROLS: m.CONTROLS, drawCard: c.drawCard };
+    document.title = `Tay cầm · ${T.INFO.name}`;
+    view = ''; render();
+  } catch (e) { console.error(e); } finally { loadingTheme = ''; }
+}
+const CAPTAIN = 2; // the role that may name the team from its phone (core/net.js)
 const BUSY = new Set(['count', 'play', 'paused', 'ending']); // roles are locked while a round runs
 const STATE_TEXT = { intro: 'Chọn vai rồi chờ quản trò bắt đầu', demo: 'Đang xem demo trên màn hình lớn', count: 'Chuẩn bị… 3 · 2 · 1', play: 'ĐANG CHƠI — bấm nút!', paused: 'Tạm dừng', ending: 'Hết vòng!', result: 'Xem điểm trên màn hình lớn · có thể đổi vai' };
 
@@ -93,9 +104,9 @@ function connect() {
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
     if (m.t === 'sync') { const now = performance.now(), rtt = now - m.c; if (rtt < bestRtt) { bestRtt = rtt; offset = m.h + rtt / 2 - now; } }
-    if (m.t === 'state') { state = m; render(); }
+    if (m.t === 'state') { state = m; useTheme(m.theme); render(); }
     if (m.t === 'buzz' && navigator.vibrate) navigator.vibrate(m.p); // the big screen taps you on the shoulder (Android; iPhones ignore it)
-    if (m.t === 'card') { myCard = m; view = ''; if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 120]); render(); } // personal 20/10 card at the finale
+    if (m.t === 'card') { myCard = m; view = ''; if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 120]); render(); } // personal card at the finale
     if (m.t === 'kicked') { ws.onclose = null; ws.close(); $('dot').classList.remove('ok'); $('status').textContent = 'Tay cầm này đã mở ở tab khác'; }
   };
   ws.onclose = () => { $('dot').classList.remove('ok'); $('status').textContent = 'Mất kết nối… đang nối lại'; releaseAll(); setTimeout(connect, 1000); };
@@ -105,48 +116,50 @@ setInterval(() => send({ t: 'sync', c: performance.now() }), 8000);
 const myRole = () => state ? state.roles.findIndex(r => r && r.pid === pid) : -1;
 
 function render() {
-  const role = myRole(), R = ROLES[role], round = state && ROUNDS[state.scene];
+  const role = myRole(), R = T?.ROLES[role], round = state && T?.CONTROLS[state.scene];
   document.documentElement.style.setProperty('--c', R ? R.c : '#b79ced');
   document.documentElement.style.setProperty('--cd', R ? R.cd : '#8b6bd0');
   $('ava').textContent = R ? R.icon : '🙂';
   $('name').textContent = myName || 'Chưa có tên';
-  $('sub').textContent = (R ? `Vai ${R.name} · ${R.paint}` : 'Chưa chọn vai') + (state && state.team ? ` · Đội ${state.team}` : '');
+  $('sub').textContent = (R ? `Vai ${R.name} · ${R.desc}` : 'Chưa chọn vai') + (state && state.team ? ` · Đội ${state.team}` : '');
   const st = $('status');
   st.classList.toggle('play', !!state && state.state === 'play' && role >= 0);
   const watching = round && BUSY.has(state.state) && role < 0;
-  st.textContent = !state ? 'Đang kết nối…' : round ? `${round.title} — ${watching ? 'các bạn khác đang chơi' : STATE_TEXT[state.state] || ''}` : 'Chọn vai rồi nhìn lên màn hình lớn';
+  st.textContent = !state ? 'Đang kết nối…' : !T ? 'Đang tải trò chơi…' : round ? `${round.title} — ${watching ? 'các bạn khác đang chơi' : STATE_TEXT[state.state] || ''}` : 'Chọn vai rồi nhìn lên màn hình lớn';
 
   // which screen: name form → buttons (round running) → key test on the intro card (role chosen) → role picker
   let next;
   const between = state && round && (state.state === 'intro' || state.state === 'result');
   if (state && BUSY.has(state.state)) { picking = false; editingTeam = false; }
-  if (role !== 2) editingTeam = false;
+  if (role !== CAPTAIN) editingTeam = false;
   if (!myName) next = 'name';
+  else if (!T) next = 'loading';
   else if (state && state.scene === 'final' && myCard) next = 'card';
   else if (editingTeam) next = 'team';
   else if (state && round && BUSY.has(state.state)) next = role >= 0 ? 'pad:' + state.scene + ':' + role : 'spectate';
   else if (between && role >= 0 && !picking) next = 'ready:' + state.scene + ':' + role;
   else next = 'pick';
-  if (next === 'card') st.textContent = '💌 Thiệp 20/10 của bạn — lưu lại làm kỷ niệm nhé!';
+  if (next === 'card') st.textContent = `💌 ${T.INFO.cardName} của bạn — lưu lại làm kỷ niệm nhé!`;
   document.body.classList.toggle('playing', next.startsWith('pad') || next.startsWith('ready'));
   if (next === view && next !== 'pick') return;
   if (!next.startsWith('pad') && !next.startsWith('ready')) releaseAll();
   view = next;
   const main = $('main');
   if (next === 'name') {
-    main.innerHTML = `<form id="f"><label for="nm">Tên của bạn</label><input id="nm" maxlength="14" autocomplete="off" placeholder="VD: Hương" value=""><button class="go">Vào chơi 🌸</button></form>`;
+    main.innerHTML = `<form id="f"><label for="nm">Tên của bạn</label><input id="nm" maxlength="14" autocomplete="off" placeholder="VD: Hương" value=""><button class="go">Vào chơi ${T?.INFO.joinIcon || '🎉'}</button></form>`;
     $('f').addEventListener('submit', e => { e.preventDefault(); const v = $('nm').value.trim().slice(0, 14); if (!v) return; myName = v; store.set('thoa_name', v); send({ t: 'hello', name: v }); render(); });
     return;
   }
+  if (next === 'loading') { main.innerHTML = '<div class="wait"><div><span>⏳</span>Đang tải trò chơi…</div></div>'; return; }
   if (next === 'card') {
-    const url = drawCard(myCard);
-    main.innerHTML = `<div class="cardwrap"><img class="card20" src="${url}" alt="Thiệp 20/10"></div>
-      <a class="go dl" href="${url}" download="thiep-20-10-${myCard.name.replace(/[^\p{L}\p{N}]+/gu, '-')}.png">⬇️ Lưu ảnh thiệp</a>
+    const url = T.drawCard(myCard);
+    main.innerHTML = `<div class="cardwrap"><img class="card20" src="${url}" alt="${escH(T.INFO.cardName)}"></div>
+      <a class="go dl" href="${url}" download="${T.INFO.cardFile}-${myCard.name.replace(/[^\p{L}\p{N}]+/gu, '-')}.png">⬇️ Lưu ảnh thiệp</a>
       <div class="hint">iPhone: nhấn giữ vào ảnh → “Lưu vào Ảnh”</div>`;
     return;
   }
-  if (next === 'team') { // Lan names the team
-    main.innerHTML = `<form id="tf"><label for="tn">Tên đội</label><input id="tn" maxlength="24" autocomplete="off" placeholder="VD: Hoa Hướng Dương" value="${escH(state && state.team || '')}">
+  if (next === 'team') { // the captain names the team
+    main.innerHTML = `<form id="tf"><label for="tn">Tên đội</label><input id="tn" maxlength="24" autocomplete="off" placeholder="VD: ${escH(T.INFO.teamExample)}" value="${escH(state && state.team || '')}">
       <button class="go">Lưu tên đội 🏷️</button><button class="link" type="button" id="tc">Huỷ</button></form>`;
     $('tf').addEventListener('submit', e => { e.preventDefault(); send({ t: 'team', name: $('tn').value.trim().slice(0, 24) }); editingTeam = false; view = ''; render(); });
     $('tc').addEventListener('click', () => { editingTeam = false; view = ''; render(); });
@@ -156,14 +169,14 @@ function render() {
   if (next === 'pick') {
     const roles = state ? state.roles : [null, null, null];
     main.innerHTML = `<div class="hint">${round ? 'Chọn vai cho <b>' + round.title + '</b>' : 'Chọn vai trước khi vào vòng'} · bấm lại để bỏ</div>
-      <div class="roles">${ROLES.map((r, i) => {
+      <div class="roles">${T.ROLES.map((r, i) => {
         const h = roles[i], mine = h && h.pid === pid, taken = h && !mine && h.on; // an absent holder's role can be taken over
-        const what = round ? round.roles[i].d : r.paint;
+        const what = round ? round.roles[i].d : r.desc;
         return `<button class="role ${mine ? 'mine' : ''} ${taken ? 'taken' : ''}" data-r="${i}" style="--rc:${r.c}" ${taken ? 'disabled' : ''}>
           <span class="ic">${r.icon}</span><span class="tx"><b>${r.name}</b><small>${what}</small></span>
           <span class="tag">${mine ? 'Bạn ✓' : taken ? h.name : h ? h.name + ' (vắng)' : 'Trống'}</span></button>`;
       }).join('')}</div>
-      ${myRole() === 2 ? '<button class="link" id="teamBtn">🏷️ Đặt tên đội (vai Lan)</button>' : ''}
+      ${myRole() === CAPTAIN ? `<button class="link" id="teamBtn">🏷️ Đặt tên đội (vai ${T.ROLES[CAPTAIN].name})</button>` : ''}
       <button class="link" id="rename">Đổi tên</button>`;
     $('teamBtn')?.addEventListener('click', () => { editingTeam = true; view = ''; render(); });
     main.querySelectorAll('.role').forEach(b => b.addEventListener('click', () => { picking = false; send({ t: 'pick', role: +b.dataset.r === myRole() ? -1 : +b.dataset.r }); if (navigator.vibrate) navigator.vibrate(10); }));
@@ -171,9 +184,9 @@ function render() {
     return;
   }
   const L = round.roles[role];
-  main.innerHTML = (next.startsWith('ready') ? `<div class="hint">Bấm thử nút — nhân vật <b>${ROLES[role].name}</b> trên màn hình lớn sẽ nhảy lên ✓</div>` : '')
+  main.innerHTML = (next.startsWith('ready') ? `<div class="hint">Bấm thử nút — nhân vật <b>${T.ROLES[role].name}</b> trên màn hình lớn sẽ nhảy lên ✓</div>` : '')
     + `<div class="pad ${L.col ? 'col' : ''}" id="pad">${L.b.map(b => `<button class="btn" data-k="${b.k}">${b.l}<small>${b.s}</small></button>`).join('')}</div>`
-    + (next.startsWith('ready') ? `<button class="link" id="swap">Đổi vai</button>${role === 2 ? ' · <button class="link" id="teamBtn">🏷️ Đặt tên đội</button>' : ''}` : '');
+    + (next.startsWith('ready') ? `<button class="link" id="swap">Đổi vai</button>${role === CAPTAIN ? ' · <button class="link" id="teamBtn">🏷️ Đặt tên đội</button>' : ''}` : '');
   $('teamBtn')?.addEventListener('click', () => { editingTeam = true; view = ''; render(); });
   $('swap')?.addEventListener('click', () => { picking = true; render(); });
   const pad = $('pad');

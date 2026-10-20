@@ -1,11 +1,14 @@
 // Round 4 — paint flowers onto the shop sign, in rhythm.
 // One stream of flowers falls onto the palette; each girl owns one paint (Đào đỏ, Mai vàng, Lan xanh dương).
 // Mixed colours need several people pressing together; long garlands need a hand-off between painters.
-import { register, input, key, W, H, cheer, game, el, tune, SHOP_NAME } from '../main.js';
-import { C, makeCanvas, drawAt, Particles, clamp } from '../gfx.js';
+import { register, input, key, W, H, cheer, game, el, tune } from '../../../core/main.js';
+import { C, makeCanvas, drawAt, Particles, clamp } from '../../../core/gfx.js';
 import * as S from '../sprites.js';
-import * as A from '../audio.js';
-import { Round } from '../round.js';
+import * as A from '../../../core/audio.js';
+import { Round } from '../../../core/round.js';
+import { INFO } from '../meta.js';
+
+const SHOP_NAME = INFO.shopName;
 
 let BPM = 112, BEAT = 60 / BPM, BAR = BEAT * 4; // tuned per difficulty in init()
 const COL_X = 240, HIT_Y = 194, TOP_Y = 70, SPEED = 95; // px per second of song time

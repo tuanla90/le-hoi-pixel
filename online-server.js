@@ -1,4 +1,4 @@
-// Online rooms + leaderboard for Tiệm Hoa 20/10 (no dependencies, Node 18+).
+// Online rooms + leaderboard for Lễ Hội Pixel (no dependencies, Node 18+). Every room plays one theme (festival).
 //
 // Lockstep model: every browser in a room runs the same game simulation. The server owns the clock — a room's tick
 // counts 60 per second from the moment the room (or its current game) started — and stamps every button press it
@@ -14,7 +14,11 @@ const { wsAccept, wsSend, wsReader } = require('./ws-lite.js');
 const TICK_MS = 1000 / 60;
 const FRAME_MS = 33;
 const ROLES = 3;
-const ROUND_IDS = ['garden', 'carry', 'drive', 'sign', 'shop'];
+// the festivals and their rounds (the same catalogue the browser reads); a theme's leaderboard needs all its rounds
+const THEMES = require('./themes/themes.json');
+const themeOf = id => THEMES.find(t => t.id === id) || THEMES[0];
+const roundIds = theme => themeOf(theme).rounds.map(r => r[0]);
+const LEGACY_THEME = '20-10'; // leaderboard entries saved before themes existed
 const DIFFS = ['easy', 'normal', 'hard'];
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L
 
@@ -24,9 +28,9 @@ const clean = (s, n) => String(s ?? '').replace(/[<>&"\u0000-\u001f]/g, '').repl
 function newCode() {
   for (;;) { let c = ''; for (let i = 0; i < 4; i++) c += CODE_CHARS[crypto.randomInt(CODE_CHARS.length)]; if (!rooms.has(c)) return c; }
 }
-function makeRoom(hostPid) {
+function makeRoom(hostPid, theme) {
   const room = {
-    code: newCode(), host: hostPid, created: Date.now(), players: new Map(), roles: Array(ROLES).fill(null),
+    code: newCode(), host: hostPid, theme: themeOf(theme).id, created: Date.now(), players: new Map(), roles: Array(ROLES).fill(null),
     epoch: 1, t0: Date.now(), seed: crypto.randomInt(1, 2 ** 31), history: [], pending: [], lastStamp: 0,
     lastEventAt: Date.now(), scene: 'title', team: '', hashes: new Map(), hostGoneAt: 0, emptySince: 0, games: new Set(),
   };
@@ -91,7 +95,7 @@ function attach(room, pid, sock, name) {
   room.emptySince = 0; if (pid === room.host) room.hostGoneAt = 0;
   // free roles go to the first players by default, so a 3-player room is ready without fiddling
   if (!room.roles.includes(pid)) { const free = room.roles.indexOf(null); if (free >= 0) room.roles[free] = pid; }
-  wsSend(sock, { t: 'welcome', code: room.code, pid, epoch: room.epoch, seed: room.seed, u: tickOf(room), ev: room.history });
+  wsSend(sock, { t: 'welcome', code: room.code, theme: room.theme, pid, epoch: room.epoch, seed: room.seed, u: tickOf(room), ev: room.history });
   announce(room);
   wsReader(sock, m => onMessage(room, pid, m), 64 * 1024);
   const gone = () => {
@@ -103,7 +107,7 @@ function attach(room, pid, sock, name) {
   sock.on('close', gone); sock.on('error', gone);
 }
 
-// WebSocket /room?code=ABCD&pid=..&name=..   (no code, or code=new → create a room)
+// WebSocket /room?code=ABCD&pid=..&name=..&theme=..   (no code, or code=new → create a room playing that theme)
 function upgrade(req, sock, url) {
   if (!wsAccept(req, sock)) return;
   const pid = (url.searchParams.get('pid') || '').replace(/[^a-z0-9]/gi, '').slice(0, 24) || crypto.randomBytes(6).toString('hex');
@@ -111,7 +115,7 @@ function upgrade(req, sock, url) {
   let code = (url.searchParams.get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
   let room = code && code !== 'NEW' ? rooms.get(code) : null;
   if (code && code !== 'NEW' && !room) { wsSend(sock, { t: 'err', msg: `Không tìm thấy phòng ${code}` }); sock.end(); return; }
-  if (!room) room = makeRoom(pid);
+  if (!room) room = makeRoom(pid, url.searchParams.get('theme'));
   attach(room, pid, sock, name);
 }
 
@@ -166,15 +170,16 @@ const posts = new Map(); // ip -> [timestamps] (simple rate limit)
 function readBody(req, max = 16 * 1024) {
   return new Promise((ok, fail) => { let b = ''; req.on('data', c => { b += c; if (b.length > max) { fail(new Error('too big')); req.destroy(); } }); req.on('end', () => ok(b)); req.on('error', fail); });
 }
-// the difficulty most of the five rounds were played at (ties go to the harder one)
-function mainDiff(diffs) {
-  const n = { easy: 0, normal: 0, hard: 0 }; ROUND_IDS.forEach(id => n[diffs[id] || 'normal']++);
+// the difficulty most of the rounds were played at (ties go to the harder one)
+function mainDiff(diffs, ids) {
+  const n = { easy: 0, normal: 0, hard: 0 }; ids.forEach(id => n[diffs[id] || 'normal']++);
   return ['hard', 'normal', 'easy'].reduce((a, d) => (n[d] > n[a] ? d : a), 'hard');
 }
 const WEEK = 7 * 24 * 3600 * 1000;
+const entryTheme = e => e.theme || LEGACY_THEME;
 function filtered(q) {
-  const diff = DIFFS.includes(q.get('diff')) ? q.get('diff') : 'all', since = q.get('period') === 'week' ? Date.now() - WEEK : 0;
-  return board.filter(e => e.at >= since && (diff === 'all' || e.mainDiff === diff));
+  const diff = DIFFS.includes(q.get('diff')) ? q.get('diff') : 'all', since = q.get('period') === 'week' ? Date.now() - WEEK : 0, theme = themeOf(q.get('theme')).id;
+  return board.filter(e => entryTheme(e) === theme && e.at >= since && (diff === 'all' || e.mainDiff === diff));
 }
 // best entry per team (case-insensitive), highest first
 function bestPerTeam(list, score) {
@@ -192,9 +197,10 @@ async function api(req, res, url) {
     return json(res, 200, bestPerTeam(filtered(q), e => e.total).slice(0, limit).map(({ e }, i) => ({ rank: i + 1, team: e.team, members: e.members, total: e.total, rankName: e.rankName, mainDiff: e.mainDiff, scores: e.scores, diffs: e.diffs, at: e.at })));
   }
   if (url.pathname === '/api/leaderboard/rounds' && req.method === 'GET') {
-    const round = ROUND_IDS.includes(q.get('round')) ? q.get('round') : 'garden', diff = DIFFS.includes(q.get('diff')) ? q.get('diff') : null;
+    const theme = themeOf(q.get('theme')).id, ids = roundIds(theme);
+    const round = ids.includes(q.get('round')) ? q.get('round') : ids[0], diff = DIFFS.includes(q.get('diff')) ? q.get('diff') : null;
     const since = q.get('period') === 'week' ? Date.now() - WEEK : 0;
-    const list = board.filter(e => e.at >= since && e.scores[round] != null && (!diff || e.diffs[round] === diff));
+    const list = board.filter(e => entryTheme(e) === theme && e.at >= since && e.scores[round] != null && (!diff || e.diffs[round] === diff));
     return json(res, 200, bestPerTeam(list, e => e.scores[round]).slice(0, 50).map(({ s, e }, i) => ({ rank: i + 1, team: e.team, members: e.members, score: s, diff: e.diffs[round], at: e.at })));
   }
   if (url.pathname === '/api/scores' && req.method === 'POST') {
@@ -206,19 +212,19 @@ async function api(req, res, url) {
     if (!room) return json(res, 404, { error: 'room not found' });
     const key = `${room.code}:${room.created}:${b.epoch}:${b.game}`;
     if (room.games.has(key)) return json(res, 200, { ok: true, duplicate: true }); // replays and reconnects post again
-    const scores = {}, diffs = {};
-    for (const id of ROUND_IDS) {
+    const scores = {}, diffs = {}, ids = roundIds(room.theme); // the room's theme, not what the browser claims
+    for (const id of ids) {
       const v = Number(b.scores?.[id]); if (Number.isFinite(v) && v >= 0 && v <= 400) scores[id] = Math.round(v);
       diffs[id] = DIFFS.includes(b.diffs?.[id]) ? b.diffs[id] : 'normal';
     }
-    if (Object.keys(scores).length < ROUND_IDS.length) return json(res, 400, { error: 'incomplete game' }); // only full 5-round games rank
+    if (Object.keys(scores).length < ids.length) return json(res, 400, { error: 'incomplete game' }); // only games with every round rank
     const total = Math.round(Number(b.total)); if (!Number.isFinite(total) || total < 0 || total > 2000) return json(res, 400, { error: 'bad total' });
     room.games.add(key);
-    const entry = { team: clean(b.team, 24) || 'Đội không tên', members: (Array.isArray(b.members) ? b.members : []).slice(0, 6).map(m => clean(m, 14)).filter(Boolean),
-      scores, diffs, mainDiff: mainDiff(diffs), total, rankName: clean(b.rankName, 40), room: room.code, at: now };
+    const entry = { theme: room.theme, team: clean(b.team, 24) || 'Đội không tên', members: (Array.isArray(b.members) ? b.members : []).slice(0, 6).map(m => clean(m, 14)).filter(Boolean),
+      scores, diffs, mainDiff: mainDiff(diffs, ids), total, rankName: clean(b.rankName, 40), room: room.code, at: now };
     board.push(entry); if (board.length > MAX_ENTRIES) board.sort((a, c) => c.total - a.total).splice(MAX_ENTRIES);
     saveBoard();
-    const better = bestPerTeam(filtered(new URLSearchParams(`diff=${entry.mainDiff}`)), e => e.total).findIndex(x => x.e === entry);
+    const better = bestPerTeam(filtered(new URLSearchParams({ diff: entry.mainDiff, theme: entry.theme })), e => e.total).findIndex(x => x.e === entry);
     return json(res, 200, { ok: true, place: better >= 0 ? better + 1 : null, mainDiff: entry.mainDiff });
   }
   return json(res, 404, { error: 'not found' });

@@ -1,8 +1,8 @@
-import { register, input, K, key, img, W, H, cheer, game } from '../main.js';
-import { C, makeCanvas, drawAt, rng, Particles, clamp } from '../gfx.js';
+import { register, input, K, key, img, W, H, cheer, game } from '../../../core/main.js';
+import { C, makeCanvas, drawAt, rng, Particles, clamp } from '../../../core/gfx.js';
 import * as S from '../sprites.js';
-import * as A from '../audio.js';
-import { Round } from '../round.js';
+import * as A from '../../../core/audio.js';
+import { Round } from '../../../core/round.js';
 import { grassField, scatter } from '../world.js';
 
 // a square bed: Đào (up/down) and Mai (left/right) walk the frame about the same number of steps

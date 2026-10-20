@@ -1,11 +1,15 @@
-import { register, game, go, input, K, el, uiRoot, W, H, cheer, DIFF_NAME, DIFF_MULT, SHOP_NAME, teamTag } from '../main.js';
-import { C, makeCanvas, drawAt, Particles } from '../gfx.js';
+import { register, game, go, input, K, el, uiRoot, W, H, cheer, DIFF_NAME, DIFF_MULT, teamTag } from '../../../core/main.js';
+import { C, makeCanvas, drawAt, Particles } from '../../../core/gfx.js';
 import * as S from '../sprites.js';
-import * as A from '../audio.js';
-import { ROUNDS, starsHTML, starsFor } from '../round.js';
+import * as A from '../../../core/audio.js';
+import { starsHTML, starsFor } from '../../../core/round.js';
+import { theme, storeKey } from '../../../core/theme.js';
 import { skyScene } from './title.js';
-import { net, onNet, sendTo } from '../net.js';
-import { esc } from '../lobby.js';
+import { net, onNet, sendTo } from '../../../core/net.js';
+import { esc } from '../../../core/lobby.js';
+import { INFO } from '../meta.js';
+
+const SHOP_NAME = INFO.shopName;
 
 // personal 20/10 cards: each phone gets its own, titled after the sister its player was most often
 const TITLES = ['Bông Đào rạng rỡ', 'Nàng Mai khéo tay', 'Đoá Lan tinh tế'];
@@ -42,7 +46,7 @@ export default function () {
   register('final', () => {
     const camp = game.campaign || { scores: { garden: 72, carry: 85, drive: 64, sign: 58 } };
     // every round counts with the multiplier of the difficulty it was played at
-    const rows = ROUNDS.map(r => { const sc = camp.scores[r.id] || 0, d = (camp.diffs || {})[r.id] || 'normal'; return { r, sc, d, pts: Math.round(sc * DIFF_MULT[d]) }; });
+    const rows = theme.rounds.map(r => { const sc = camp.scores[r.id] || 0, d = (camp.diffs || {})[r.id] || 'normal'; return { r, sc, d, pts: Math.round(sc * DIFF_MULT[d]) }; });
     const raw = rows.reduce((s, x) => s + x.sc, 0), total = rows.reduce((s, x) => s + x.pts, 0);
     const rank = RANKS.find(r => total >= r[0]);
     let bg, parts = new Particles(), t = 0, petalT = 0, confT = 0;
@@ -51,7 +55,7 @@ export default function () {
       enter() {
         A.music('title'); A.sfx.fanfare(); cheer(14);
         let best = 0, newBest = false;
-        try { best = +localStorage.getItem('thoa_best_final') || 0; if (total > best) { localStorage.setItem('thoa_best_final', total); newBest = true; best = total; } } catch (e) { best = total; }
+        try { best = +localStorage.getItem(storeKey('best_final')) || 0; if (total > best) { localStorage.setItem(storeKey('best_final'), total); newBest = true; best = total; } } catch (e) { best = total; }
         // send every phone its card now, and again to anyone who reconnects while the finale is on screen
         const sent = new Set();
         const sendCards = () => {

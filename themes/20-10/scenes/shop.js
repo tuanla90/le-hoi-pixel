@@ -4,11 +4,11 @@
 // Three buttons per role: Đào 3 flower colours · Mai gift wrap / card / bow (each order needs only some) · Lan take / pass / hand over.
 // A wrong or useless press (no work at that station, an extra already added, two buttons at once) is a slip: that sister freezes
 // for 1–2 s. Time is the only cost — no points are taken.
-import { register, input, key, W, H, cheer, game } from '../main.js';
-import { C, makeCanvas, drawAt, Particles, clamp } from '../gfx.js';
+import { register, input, key, W, H, cheer, game } from '../../../core/main.js';
+import { C, makeCanvas, drawAt, Particles, clamp } from '../../../core/gfx.js';
 import * as S from '../sprites.js';
-import * as A from '../audio.js';
-import { Round } from '../round.js';
+import * as A from '../../../core/audio.js';
+import { Round } from '../../../core/round.js';
 
 const DURATION = 75;
 // flowers use the round-4 paint masks so the colours match: 1 hồng (đỏ) · 2 hướng dương (vàng) · 4 cẩm tú cầu (xanh dương)

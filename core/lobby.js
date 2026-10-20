@@ -1,9 +1,7 @@
 // "Kết nối điện thoại" overlay: one QR for everyone, live list of who holds which role.
 import { game, el, uiRoot, setTeam, TEAM_MAX } from './main.js';
-import { net, onNet, padURL } from './net.js';
-import * as S from './sprites.js';
-
-const ROLE_COLORS = ['#ff7aa2', '#ffcf3a', '#4aa3ff'];
+import { net, onNet, padURL, CAPTAIN } from './net.js';
+import { theme } from './theme.js';
 
 function qrImg(text) {
   if (!text || typeof window.qrcode !== 'function') return '';
@@ -43,8 +41,8 @@ export function openLobby() {
       </div>
       <div class="lobby-info">
         <ol><li>Điện thoại bắt <b>cùng Wi‑Fi</b> với máy này</li><li>Quét mã, nhập tên</li><li>Chọn vai trên điện thoại — <b>đổi được trước mỗi vòng</b></li></ol>
-        <div class="lobby-roles">${[0, 1, 2].map(i => `<div class="lr" style="--rc:${ROLE_COLORS[i]}"><b>${S.GIRLS[i].name}</b>${roleChip(i) || ''}</div>`).join('')}</div>
-        <div class="lobby-team">🏷️ Tên đội: <b>${esc(game.team || 'chưa đặt')}</b> <button class="seg" data-team>✏️ Đổi <span class="key">N</span></button> <small>(bạn giữ vai Lan cũng đổi được trên điện thoại)</small></div>
+        <div class="lobby-roles">${theme.roles.map((R, i) => `<div class="lr" style="--rc:${R.c}"><b>${R.name}</b>${roleChip(i) || ''}</div>`).join('')}</div>
+        <div class="lobby-team">🏷️ Tên đội: <b>${esc(game.team || 'chưa đặt')}</b> <button class="seg" data-team>✏️ Đổi <span class="key">N</span></button> <small>(bạn giữ vai ${theme.roles[CAPTAIN].name} cũng đổi được trên điện thoại)</small></div>
         <div class="lobby-players"><small>Đã vào (${players.length}):</small> ${players.map(([, p]) => `<span class="pl ${p.on ? '' : 'off'}">${esc(p.name || '…đang nhập tên')}</span>`).join('') || '<small>chưa có ai</small>'}</div>
       </div>`;
     body.querySelectorAll('[data-ip]').forEach(b => b.addEventListener('click', () => { ipIdx = +b.dataset.ip; render(); }));
@@ -63,8 +61,8 @@ export function openLobby() {
 export function openTeamDialog(then) {
   if (game.modal) return;
   const box = el(`<div class="lobby"><form class="card team-card pop"><div class="ribbon">🏷️ Tên đội</div>
-    <p>Tên đội hiện trên thẻ kết quả, bảng tổng kết và thiệp 20/10 của mọi người.</p>
-    <input class="team-input" maxlength="${TEAM_MAX}" placeholder="VD: Hoa Hướng Dương" value="${esc(game.team)}" autocomplete="off">
+    <p>Tên đội hiện trên thẻ kết quả, bảng tổng kết và ${theme.cardName.toLowerCase()} của mọi người.</p>
+    <input class="team-input" maxlength="${TEAM_MAX}" placeholder="VD: ${esc(theme.teamExample)}" value="${esc(game.team)}" autocomplete="off">
     <div class="btns"><button class="btn" type="submit">Lưu <span class="key">Enter</span></button><button class="btn alt" type="button" data-x>Huỷ <span class="key">Esc</span></button></div>
   </form></div>`);
   uiRoot.appendChild(box);
