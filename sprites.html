@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><title>Sprite sheet</title>
+<style>body{background:#cfe9c8;margin:0;padding:10px;font:12px sans-serif}canvas{image-rendering:pixelated}</style>
+<canvas id="c"></canvas>
+<script type="module">
+import * as S from './js/sprites.js';
+const list=[];
+for(let i=0;i<3;i++)for(const d of ['down','up','side'])for(let f=0;f<4;f++)list.push(S.girl(i,d,f,false));
+for(let i=0;i<3;i++)list.push(S.girl(i,'down',0,true),S.girl(i,'up',1,true),S.girl(i,'side',0,true));
+for(const t of S.PLANT_TYPES)for(let s=0;s<4;s++)list.push(S.plant(t,s,'ok'));
+for(const t of S.PLANT_TYPES)list.push(S.plant(t,3,'thirsty'),S.plant(t,3,'wilt'),S.plant(t,1,'thirsty'));
+list.push(S.soilPlot(false),S.soilPlot(true),S.weeds,...S.bug,...Object.values(S.bubble),...Object.values(S.tools),...S.cursorFrame);
+list.push(S.tree,S.treeRound,S.bush,...S.flowerTuft,S.fenceH,S.fenceV,S.rock,S.mushroom,...S.butterfly,S.shed,S.pond,S.signPost,S.wheelbarrow);
+list.push(S.bigPot,S.brokenPot,...S.dog,S.cat,S.hedge,S.flowerBed,S.stoneTile,S.doormat);
+list.push(S.truck,S.truckSide,...S.potTop,S.cone,S.pothole,S.puddle,...S.duck,...S.duckling,S.tractor,S.scooter,...S.sparkleFlower,...S.house,S.lampPost);
+for(const k of ['hong','cuc','sen','huongduong','meo','vit','banhmi','trasua','ngaingu','cay','lapanh','lanh'])list.push(S.wordArt(k),S.sketchArt(k));
+list.push(S.heart,S.star,S.starEmpty,S.note,...S.petal);
+const shop=S.shopFacade();
+const W=440, sc=3; let x=4,y=4,rowH=0; const pos=[];
+for(const c of list){ if(x+c.width>W){x=4;y+=rowH+4;rowH=0;} pos.push([c,x,y]); x+=c.width+4; rowH=Math.max(rowH,c.height);}
+y+=rowH+6; pos.push([shop,4,y]); const H=y+shop.height+4;
+const cv=document.getElementById('c'); cv.width=W; cv.height=H; cv.style.width=W*sc+'px'; cv.style.height=H*sc+'px';
+const g=cv.getContext('2d'); g.fillStyle='#8fd16a'; g.fillRect(0,0,W,H);
+for(const [c,px,py] of pos) g.drawImage(c,px,py);
+</script>

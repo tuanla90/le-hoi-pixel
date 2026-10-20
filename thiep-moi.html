@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thiệp mời 20/10</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=VT323&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: #2c1f2e;
+    background-image: radial-gradient(circle at 25% 30%, #4a2f4a 0, transparent 40%), radial-gradient(circle at 80% 70%, #3a2a50 0, transparent 45%);
+    display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 16px;
+    font-family: "Baloo 2", "Trebuchet MS", system-ui, sans-serif; color: #3b2a3a;
+  }
+  #card { display: block; height: min(calc(100vh - 92px), 1920px); max-width: 100%; aspect-ratio: 9 / 16; object-fit: contain;
+    image-rendering: pixelated; box-shadow: 0 0 0 4px #1d141f, 0 12px 60px #0008; border-radius: 6px; }
+  .btn { font: 800 17px "Baloo 2", system-ui, sans-serif; color: #fff; background: #ff8fb1; border: 2px solid #3b2a3a; border-radius: 8px;
+    padding: 6px 20px; cursor: pointer; box-shadow: inset 0 -4px 0 #d9628f, 0 3px 0 #3b2a3a; text-shadow: 0 1px 0 #d9628f; }
+  .btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .btn:active { transform: translateY(2px); box-shadow: inset 0 -2px 0 #d9628f, 0 1px 0 #3b2a3a; }
+  body.raw { padding: 0; display: block; background: #000; }
+  body.raw #card { width: 1080px; height: 1920px; max-width: none; box-shadow: none; border-radius: 0; }
+  body.raw .bar { display: none; }
+</style>
+</head>
+<body>
+<canvas id="card" width="1080" height="1920"></canvas>
+<div class="bar"><button class="btn" id="dl">⬇ Tải ảnh thiệp (PNG)</button></div>
+<script type="module">
+import { C, sprite, makeCanvas, drawAt, rng } from './js/gfx.js';
+import * as S from './js/sprites.js';
+
+const RAW = new URLSearchParams(location.search).has('raw');
+if (RAW) document.body.classList.add('raw');
+
+const W = 270, H = 480, K = 4;          // logical pixel grid × scale = 1080 × 1920
+const card = document.getElementById('card');
+const g = card.getContext('2d');
+
+// ---------------------------------------------------------------- icons
+const clock = sprite(15, 15, p => {
+  p.circ(7.5, 7.5, 7, C.white); p.circ(7.5, 7.5, 5.6, C.cream);
+  [[7, 2], [12, 7], [7, 12], [2, 7]].forEach(([x, y]) => p.px(x, y, C.pinkD));
+  p.rect(7, 3, 1, 5, C.out); p.rect(7, 7, 4, 1, C.out); p.px(7, 7, C.red);
+  p.rect(3, 0, 2, 2, C.pink); p.rect(10, 0, 2, 2, C.pink);
+});
+const pin = sprite(13, 16, p => {
+  p.circ(6.5, 6, 6, C.pink); for (let y = 10; y < 15; y++) p.rect(6.5 - (15 - y) * 0.7, y, (15 - y) * 1.4, 1, C.pink);
+  p.circ(6.5, 6, 2.6, C.white); p.px(3, 3, C.pinkL); p.px(4, 2, C.pinkL);
+});
+const cloud = (w) => sprite(w, 12, p => { p.ell(w * .3, 7, w * .22, 4, C.white); p.ell(w * .55, 5, w * .25, 5, C.white); p.ell(w * .78, 7.5, w * .2, 3.5, C.white); p.rect(3, 8, w - 6, 3, C.white); }, { outline: '#d6e8fb' });
+
+// ---------------------------------------------------------------- happy sisters + flower truck
+// the game's girl, redrawn for the card: ^‿^ eyes, open smile, cheering / waving / holding a bouquet
+function happyGirl(i, pose, f) {
+  const o = S.GIRLS[i];
+  return sprite(22, 26, P => {
+    const q = { // shift by (2,2) so raised arms fit inside the sprite
+      rect: (x, y, w, h, c) => P.rect(x + 2, y + 2, w, h, c), px: (x, y, c) => P.px(x + 2, y + 2, c),
+      ell: (x, y, rx, ry, c) => P.ell(x + 2, y + 2, rx, ry, c), circ: (x, y, r, c) => P.circ(x + 2, y + 2, r, c),
+      line: (a, b, x, y, c) => P.line(a + 2, b + 2, x + 2, y + 2, c),
+    };
+    if (o.style === 'long') q.rect(4, 8, 10, 7, o.hairD);
+    if (o.style === 'pony') { q.rect(13, 6, 3, 7, o.hair); q.rect(14, 12, 2, 3, o.hairD); }
+    // legs
+    q.rect(6, 20, 2, 2, C.skin); q.rect(10, 20, 2, 2, C.skin); q.rect(6, 22, 2, 1, C.brownD); q.rect(10, 22, 2, 1, C.brownD);
+    // dress
+    [[6, 6], [6, 6], [5, 8], [5, 8], [4, 10], [4, 10], [4, 10]].forEach(([x, w], k) => { q.rect(x, 13 + k, w, 1, o.dress); q.px(x + w - 1, 13 + k, o.dressD); });
+    q.rect(4, 19, 10, 1, o.dressD); q.rect(7, 13, 4, 1, C.white); q.px(8, 14, C.white); q.px(9, 14, C.white);
+    // arms
+    const up = (sx, hx, hy) => { q.line(sx, 14, hx, hy, C.skin); q.line(sx + (hx < sx ? -0 : 0), 13, hx, hy - 1, C.skin); q.circ(hx + .5, hy - 1, 1.3, C.skin); };
+    if (pose === 'cheer') { up(4, 0 - f, 5 + f); up(13, 17 + f, 5 + f); }
+    if (pose === 'wave') { q.rect(3, 14, 1, 3, C.skin); up(13, 17 - f * 2, 4); }
+    if (pose === 'bouquet') {
+      up(4, 1, 6 - f);
+      q.rect(12, 15, 3, 2, C.skin);
+      for (let y = 15; y < 21; y++) q.rect(10 + (y - 15) * .4, y, 6 - (y - 15) * .8, 1, y % 2 ? C.white : C.pinkL); // paper cone
+      q.ell(13, 13, 4, 2.5, C.green); [[11, 12, C.red], [14, 11, C.pink], [13, 14, C.yellow], [16, 13, C.lav], [12, 10, C.white]].forEach(([x, y, c]) => q.circ(x, y, 1.4, c));
+    }
+    // head
+    q.ell(9, 7.5, 6, 6, o.hair); q.ell(9, 9.2, 4.6, 3.9, C.skin);
+    q.rect(5, 5, 8, 2, o.hair); q.px(5, 7, o.hair); q.px(12, 7, o.hair); q.px(8, 7, o.hair); q.rect(4, 4, 10, 1, o.hair);
+    [6, 11].forEach(e => { q.px(e - 1, 9, C.out); q.px(e, 8, C.out); q.px(e + 1, 9, C.out); });   // ^ ^ (one row up, clear of the smile)
+    q.px(7, 11, C.out); q.px(10, 11, C.out); q.rect(8, 12, 2, 1, C.out); q.rect(8, 11, 2, 1, C.red); // open smile
+    q.rect(4, 11, 2, 1, C.pink); q.rect(12, 11, 2, 1, C.pink);
+    q.px(7, 3, o.hairD); q.px(8, 2, o.hairD);
+    if (o.style === 'bob') { q.rect(3, 8, 1, 4, o.hair); q.rect(14, 8, 1, 4, o.hair); }
+    if (o.style === 'long') { q.rect(12, 2, 3, 2, o.acc); q.px(13, 1, o.acc); q.px(13, 4, o.acc); }
+    if (o.style === 'pony') { q.circ(13.5, 3, 1.6, C.pink); q.px(13, 2, C.yellow); }
+    if (o.style === 'bob') q.rect(4, 3, 10, 1, o.acc);
+  });
+}
+const POSES = ['cheer', 'bouquet', 'wave'];
+const girlsHappy = [0, 1, 2].map(i => [0, 1].map(f => happyGirl(i, POSES[i], f)));
+
+const flowerTruck = sprite(60, 40, p => {
+  const r = rng(7);
+  // heap of flowers on the bed
+  p.ell(21, 17, 20, 7, C.greenD); p.ell(20, 15, 17, 6, C.green);
+  for (let k = 0; k < 34; k++) {
+    const x = 4 + r() * 34, y = 10 + r() * 9 - Math.sin((x - 2) / 38 * Math.PI) * 6;
+    const c = [C.red, C.pink, C.yellow, C.white, C.lav, C.orange, C.pinkL][k % 7];
+    p.circ(x, y, 1.9, c); p.px(x, y, c === C.yellow ? C.orange : C.yellow);
+  }
+  p.circ(10, 4, 3, C.yellow); p.circ(10, 4, 1.3, C.brown); p.line(10, 7, 11, 12, C.greenD); // a sunflower sticking out
+  p.circ(30, 5, 2.5, C.red); p.line(30, 7, 29, 12, C.greenD);
+  // bed side
+  p.rect(1, 19, 41, 12, C.pink); p.rect(1, 19, 41, 2, C.pinkL); p.rect(1, 29, 41, 2, C.pinkD);
+  // cab
+  p.rect(42, 8, 15, 23, C.cream); p.rect(42, 8, 15, 2, C.pinkL); p.rect(57, 17, 2, 14, C.cream);
+  p.rect(45, 11, 9, 8, C.sky); p.rect(46, 12, 3, 2, C.white); p.rect(43, 22, 13, 1, C.creamD);
+  p.rect(57, 21, 2, 3, C.yellow); p.px(49, 24, C.grayD);
+  // chassis + wheels
+  p.rect(0, 31, 60, 2, C.grayD);
+  [[11, 34], [48, 34]].forEach(([x, y]) => { p.circ(x, y, 5, C.out); p.circ(x, y, 2.4, C.gray); p.circ(x, y, 1, C.grayL); });
+});
+const puff = sprite(7, 6, p => { p.circ(3.5, 3, 2.8, C.white); p.px(2, 2, C.grayL); }, { outline: C.grayL });
+
+// ---------------------------------------------------------------- pixel UI pieces (low-res)
+function box(gg, x, y, w, h, fill, edge = C.out, r = 2) {
+  for (let j = 0; j < h; j++) {
+    const ins = j < r ? r - j : j >= h - r ? j - (h - r) + 1 : 0;
+    gg.fillStyle = (j === 0 || j === h - 1 || false) ? edge : fill;
+    gg.fillRect(x + ins, y + j, w - ins * 2, 1);
+    gg.fillStyle = edge; gg.fillRect(x + ins, y + j, 1, 1); gg.fillRect(x + w - ins - 1, y + j, 1, 1);
+    if (ins && j > 0 && j < h - 1) { gg.fillRect(x + ins, y + j, 1, 1); }
+  }
+}
+function ribbon(gg, x, y, w, h, fill, dark) {
+  box(gg, x, y, w, h, fill);
+  gg.fillStyle = dark; gg.fillRect(x + 2, y + h - 3, w - 4, 2);
+}
+function panel(gg, x, y, w, h) {
+  gg.globalAlpha = .28; box(gg, x + 2, y + 3, w, h, C.out, C.out, 4); gg.globalAlpha = 1;
+  box(gg, x, y, w, h, C.cream, C.out, 4);
+  gg.fillStyle = C.white; gg.fillRect(x + 3, y + 2, w - 6, 1); gg.fillRect(x + 2, y + 3, 1, h - 6); gg.fillRect(x + w - 3, y + 3, 1, h - 6); gg.fillRect(x + 3, y + h - 3, w - 6, 1);
+  gg.fillStyle = C.pinkL; gg.fillRect(x + 4, y + 3, w - 8, 1); gg.fillRect(x + 3, y + 4, 1, h - 8); gg.fillRect(x + w - 4, y + 4, 1, h - 8); gg.fillRect(x + 4, y + h - 4, w - 8, 1);
+}
+
+// ---------------------------------------------------------------- static background
+const PANEL = { x: 16, y: 138, w: 238, h: 104 };
+const SHOP = { x: 135, y: 414 };
+const TRUCK = { x: 200, y: 444 };
+const shop = S.shopFacade();
+const sky = makeCanvas(W, H, gg => {
+  const bands = ['#cbb8f2', '#d3c4f6', '#dccff8', '#d6e6ff', '#cdeaff', '#d8f0ff', '#e6f6ff', '#f2f9ff', '#fff2f6', '#ffe8f0'];
+  bands.forEach((c, i) => { gg.fillStyle = c; gg.fillRect(0, i * 38, W, 38); });
+  for (let i = 1; i < bands.length; i++) { gg.fillStyle = bands[i]; for (let x = 0; x < W; x += 2) gg.fillRect(x + (i % 2), i * 38 - 1, 1, 1); }
+});
+// everything in front of the drifting clouds
+const bg = makeCanvas(W, H, gg => {
+  // far hills
+  const hill = (col, base, amp, f, ph) => { gg.fillStyle = col; for (let x = 0; x < W; x++) { const y = base - Math.round(Math.sin(x * f + ph) * amp + Math.sin(x * f * 2.3 + ph) * amp * .4); gg.fillRect(x, y, 1, H - y); } };
+  hill('#bfe3c6', 352, 14, 0.02, 1); hill('#9fd6a7', 378, 10, 0.03, 3);
+  // grass + path
+  gg.fillStyle = C.grass; gg.fillRect(0, 392, W, H - 392);
+  const r = rng(20);
+  for (let i = 0; i < 420; i++) { gg.fillStyle = r() < .5 ? C.grassD : C.grassL; gg.fillRect((r() * W) | 0, 392 + ((r() * (H - 392)) | 0), 1, 2); }
+  gg.fillStyle = '#ecdcb4'; gg.fillRect(0, 412, W, 28); gg.fillStyle = '#d9c39a'; gg.fillRect(0, 412, W, 2); gg.fillRect(0, 438, W, 2);
+  for (let x = 0; x < W; x += 12) { gg.fillStyle = '#e2cfa3'; gg.fillRect(x + ((x / 12) % 2) * 6, 424, 7, 5); }
+  // trees, shop, lamps, flowers
+  drawAt(gg, S.tree, 12, 404); drawAt(gg, S.treeRound, 262, 406);
+  drawAt(gg, shop, SHOP.x, SHOP.y);
+  drawAt(gg, S.lampPost, 8, 440);
+  [[22, 452, 0], [44, 470, 2], [88, 476, 1], [182, 476, 4], [226, 470, 3], [250, 454, 0], [8, 474, 1], [264, 476, 2]].forEach(([x, y, k]) => drawAt(gg, S.flowerTuft[k], x, y));
+  drawAt(gg, S.mushroom, 34, 476); drawAt(gg, S.rock, 240, 478);
+  // HUD
+  [0, 1, 2].forEach(i => drawAt(gg, S.heart, 10 + i * 13, 6, { ax: 0, ay: 0 }));
+  [0, 1, 2].forEach(i => drawAt(gg, S.star, 218 + i * 14, 5, { ax: 0, ay: 0 }));
+  // title ribbon + subtitle pill
+  ribbon(gg, 82, 6, 106, 18, C.lav, C.lavD);
+  ribbon(gg, 64, 106, 142, 16, C.pink, C.pinkD);
+  // info panel
+  panel(gg, PANEL.x, PANEL.y, PANEL.w, PANEL.h);
+  ribbon(gg, 70, 131, 130, 15, C.mint, C.mintD);
+  drawAt(gg, clock, 26, 154, { ax: 0, ay: 0, sx: 2, sy: 2 });
+  gg.fillStyle = C.pinkL; for (let x = 26; x < 244; x += 6) gg.fillRect(x, 199, 3, 1);
+  drawAt(gg, pin, 28, 204, { ax: 0, ay: 0, sx: 2, sy: 2 });
+  // start button
+  ribbon(gg, 52, 446, 166, 22, C.yellow, C.yellowD);
+});
+
+const clouds = [[40, 34, 38], [210, 60, 30], [120, 236, 44], [250, 150, 26], [-10, 250, 34]].map(([x, y, w], i) => ({ x, y, img: cloud(w), v: 2 + i * .7 }));
+
+// ---------------------------------------------------------------- text layer (hi-res)
+const BAL = '"Baloo 2", "Trebuchet MS", sans-serif', VT = 'VT323, Consolas, monospace';
+function font(gg, size, weight = 800, fam = BAL) { gg.font = `${weight} ${size * K}px ${fam}`; }
+// runs: [{t, fill}] drawn as one centred (or left) line with the game's chunky outline
+function runs(gg, list, x, y, { size, weight = 800, fam = BAL, align = 'center', stroke = C.out, sw = 0, shadow = null, drop = 0 }) {
+  font(gg, size, weight, fam); gg.textBaseline = 'alphabetic'; gg.textAlign = 'left'; gg.lineJoin = 'round';
+  const ws = list.map(r => gg.measureText(r.t).width), tot = ws.reduce((a, b) => a + b, 0);
+  let cx = align === 'center' ? x * K - tot / 2 : x * K;
+  const X = [], Y = y * K;
+  list.forEach((r, i) => { X.push(cx); cx += ws[i]; });
+  const pass = (dy, fn) => list.forEach((r, i) => fn(r, X[i], Y + dy * K));
+  if (drop) pass(drop, (r, px, py) => { gg.lineWidth = sw * K; gg.strokeStyle = stroke; gg.fillStyle = stroke; if (sw) gg.strokeText(r.t, px, py); gg.fillText(r.t, px, py); });
+  if (sw) pass(0, (r, px, py) => { gg.lineWidth = sw * K; gg.strokeStyle = stroke; gg.strokeText(r.t, px, py); });
+  if (shadow) pass(shadow.dy, (r, px, py) => { gg.fillStyle = shadow.c; gg.fillText(r.t, px, py); });
+  pass(0, (r, px, py) => { gg.fillStyle = r.fill; gg.fillText(r.t, px, py); });
+  return tot / K;
+}
+const text = (gg, t, x, y, o) => runs(gg, [{ t, fill: o.fill }], x, y, o);
+
+// canvas text only uses a web font once it is downloaded, so wait for the Google Fonts
+// stylesheet first (otherwise fonts.load() finds no @font-face and resolves at once),
+// then pull every subset we draw with — Vietnamese diacritics live in their own file.
+const VI = 'Mừng ngày Ngày Phụ nữ Việt Nam THƯ MỜI NHIỆM VỤ ĐẶC BIỆT TRƯA Thứ Ba Nômna Triệu Vương THAM GIA NGAY 0123456789:/·★✦';
+const cssReady = new Promise(res => {
+  const link = document.querySelector('link[href*="fonts.googleapis"]');
+  if (!link || link.sheet) return res();
+  link.addEventListener('load', res); link.addEventListener('error', res);
+});
+const fontsReady = Promise.race([
+  cssReady.then(() => Promise.all([
+    document.fonts.load(`800 40px "Baloo 2"`, VI),
+    document.fonts.load(`700 40px "Baloo 2"`, VI),
+    document.fonts.load(`40px VT323`, '12:00'),
+  ])).then(() => document.fonts.ready),
+  new Promise(r => setTimeout(r, 6000)),
+]);
+
+let textLayer;
+function buildText() {
+  textLayer = makeCanvas(W * K, H * K, tg => {
+    tg.imageSmoothingEnabled = true;
+    const lab = { size: 10.5, sw: 1.6, stroke: C.out, shadow: null };
+    text(tg, '★ THƯ MỜI ★', 135, 19, { ...lab, size: 11, fill: C.white, stroke: C.lavD, sw: 1.4 });
+    // logo
+    const logo = { sw: 3.4, stroke: C.out, shadow: { dy: 1.6, c: C.pinkD }, drop: 3 };
+    text(tg, 'Mừng ngày', 135, 56, { ...logo, size: 30, fill: C.white });
+    runs(tg, [{ t: '20', fill: C.pinkL }, { t: '/', fill: C.yellow }, { t: '10', fill: C.pinkL }], 135, 99, { ...logo, size: 56, sw: 4, drop: 3.6, shadow: { dy: 2, c: C.pinkD } });
+    text(tg, 'Ngày Phụ nữ Việt Nam', 135, 118, { size: 10.5, fill: C.white, stroke: C.pinkD, sw: 1.4 });
+    // panel
+    text(tg, '✦ NHIỆM VỤ ĐẶC BIỆT ✦', 135, 142, { size: 9.5, fill: C.white, stroke: C.mintD, sw: 1.4 });
+    const w = runs(tg, [{ t: '12:00', fill: C.pinkD }], 62, 182, { size: 40, weight: 400, fam: VT, align: 'left', stroke: C.white, sw: 1.2 });
+    text(tg, 'TRƯA', 62 + w + 4, 180, { size: 15, fill: C.out, align: 'left' });
+    text(tg, 'Thứ Ba · 20/10/2026', 62, 194, { size: 11, weight: 700, fill: C.outSoft, align: 'left' });
+    text(tg, 'Nômna', 62, 223, { size: 21, fill: C.pinkD, align: 'left', stroke: C.white, sw: 1.2 });
+    text(tg, '70 Triệu Việt Vương', 62, 236, { size: 11.5, weight: 700, fill: C.outSoft, align: 'left' });
+    // shop sign
+    text(tg, 'Nômna', SHOP.x, 304, { size: 15, fill: C.pinkD });
+    // truck side banner (bed side spans y 406..424 at 2×)
+    text(tg, '♥ 20/10 ♥', TRUCK.x - 18, 421, { size: 13, fill: C.white, stroke: C.pinkD, sw: 1.6 });
+    // bottom
+    text(tg, 'THAM GIA NGAY', 140, 462, { size: 12, fill: C.out });
+  });
+}
+
+// ---------------------------------------------------------------- live scene
+const live = makeCanvas(W, H);
+const lg = live.getContext('2d');
+const R = rng(1020);
+const petals = Array.from({ length: 26 }, (_, i) => ({ x: R() * W, y: R() * H, v: 9 + R() * 10, ph: R() * 6.28, k: i % S.petal.length }));
+const sparkles = [[30, 64], [242, 46], [226, 96], [44, 98], [246, 270], [22, 300]];
+const bflies = [{ x: 60, y: 372, ph: 0 }, { x: 214, y: 360, ph: 2 }];
+
+function frame(t) {
+  lg.drawImage(sky, 0, 0);
+  clouds.forEach(c => drawAt(lg, c.img, ((c.x + t * c.v) % (W + 60)) - 30, c.y, { ax: .5, ay: 0 }));
+  lg.drawImage(bg, 0, 0);
+  sparkles.forEach(([x, y], i) => drawAt(lg, S.sparkleFlower[((t * 2 + i) | 0) % 2], x, y, { ax: .5, ay: .5 }));
+  // flower truck (bobbing on the engine) with exhaust puffs
+  const bob = 0; // the banner text is static, so the truck stays put
+  for (let k = 0; k < 3; k++) { const u = (t * .9 + k / 3) % 1; drawAt(lg, puff, TRUCK.x - 62 - u * 18, TRUCK.y - 6 - u * 10, { alpha: 1 - u, ax: .5, ay: .5 }); }
+  drawAt(lg, flowerTruck, TRUCK.x, TRUCK.y - bob, { sx: 2, sy: 2 });
+  // the three sisters in a little huddle, hopping and waving
+  [[36, 444, 0], [98, 444, 2], [67, 448, 1]].forEach(([x, y, i]) => {
+    const hop = ((t * 2.4 + i * .45) % 1.2) < .3 ? -3 : 0, f = ((t * 4 + i) | 0) % 2;
+    drawAt(lg, girlsHappy[i][RAW ? 0 : f], x, y + (RAW ? (i === 1 ? -3 : 0) : hop), { sx: 2, sy: 2 });
+  });
+  // hearts floating up from the group
+  for (let k = 0; k < 4; k++) { const u = (t * .45 + k / 4) % 1; drawAt(lg, k % 2 ? S.heart : S.note, 40 + k * 18 + Math.sin(t * 2 + k) * 4, 384 - u * 44, { alpha: u < .8 ? 1 : (1 - u) * 5, ax: .5, ay: .5 }); }
+  bflies.forEach((b, i) => drawAt(lg, S.butterfly[((t * 6) | 0) % 2], b.x + Math.sin(t * .7 + b.ph) * 24, b.y + Math.sin(t * 1.9 + b.ph) * 8));
+  petals.forEach(p => { const y = (p.y + t * p.v) % (H + 10) - 5, x = (p.x + Math.sin(t * 1.3 + p.ph) * 8 + t * 4) % (W + 8) - 4; drawAt(lg, S.petal[p.k], x, y, { ax: .5, ay: .5 }); });
+  // blinking start arrow
+  if (RAW || ((t * 1.6) | 0) % 2 === 0) { lg.fillStyle = C.out; for (let j = 0; j < 9; j++) lg.fillRect(66, 451 + j, 1 + Math.min(j, 8 - j), 1); }
+
+  g.imageSmoothingEnabled = false;
+  g.drawImage(live, 0, 0, W * K, H * K);
+  g.drawImage(textLayer, 0, 0);
+}
+
+await fontsReady;
+buildText();
+// a late font (slow network) → redraw the text with it
+document.fonts.addEventListener('loadingdone', () => { buildText(); if (RAW) frame(3.2); });
+if (RAW) { frame(3.2); document.title = 'ready'; }
+else {
+  const t0 = performance.now();
+  const loop = now => { frame((now - t0) / 1000); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+
+document.getElementById('dl').addEventListener('click', () => {
+  card.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'thiep-moi-20-10.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }, 'image/png');
+});
+</script>
+</body>
+</html>

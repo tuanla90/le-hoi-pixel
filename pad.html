@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2c1f2e">
+<title>Tay cầm · Tiệm Hoa 20/10</title>
+<style>
+  /* Phone controller: enter a name, pick a role before each round, then big buttons only. */
+  :root { --ink: #3b2a3a; --cream: #fff6e3; --bg: #2c1f2e; --card: #ffffff14; --c: #b79ced; --cd: #8b6bd0; color-scheme: dark;
+    --font: "Baloo 2", "Trebuchet MS", "Segoe UI", system-ui, sans-serif; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--cream); font-family: var(--font);
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
+  body { display: flex; flex-direction: column; padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px); gap: 12px; }
+  body.playing { touch-action: none; }
+  header { display: flex; align-items: center; gap: 12px; }
+  .ava { width: 52px; height: 52px; border-radius: 14px; background: var(--c); display: grid; place-items: center; font-size: 28px; border: 3px solid var(--ink); box-shadow: 0 3px 0 #0006; flex: none; }
+  .who { flex: 1; min-width: 0; }
+  .who b { display: block; font-size: 24px; line-height: 1.05; color: var(--c); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .who small { font-size: 14px; opacity: .8; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; background: #e0485e; box-shadow: 0 0 0 3px #0005; flex: none; }
+  .dot.ok { background: #5fd36a; }
+  .status { text-align: center; font-size: 16px; font-weight: 700; padding: 8px 12px; border-radius: 12px; background: var(--card); }
+  .status.play { background: var(--c); color: var(--ink); }
+  main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+  /* buttons */
+  .pad { flex: 1; min-height: 0; display: flex; gap: 14px; }
+  .pad.col { flex-direction: column; }
+  .btn { flex: 1; min-width: 0; min-height: 0; border: 4px solid var(--ink); border-radius: 26px; background: var(--c); color: #fff; font-family: var(--font);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; box-shadow: inset 0 -10px 0 var(--cd), 0 6px 0 #000a;
+    font-size: 64px; line-height: 1; font-weight: 800; text-shadow: 0 3px 0 var(--cd); transition: transform .05s; touch-action: none; }
+  .btn small { font-size: 18px; font-weight: 700; text-shadow: none; }
+  .btn.on { transform: translateY(6px); box-shadow: inset 0 -4px 0 var(--cd), 0 0 30px var(--c); filter: brightness(1.12); }
+  /* role picker */
+  .hint { text-align: center; font-size: 15px; opacity: .85; }
+  .roles { display: flex; flex-direction: column; gap: 10px; }
+  .role { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; border: 3px solid var(--ink); background: var(--rc); color: var(--ink); font-family: var(--font); text-align: left; box-shadow: 0 4px 0 #000a; }
+  .role .ic { font-size: 30px; }
+  .role .tx { flex: 1; min-width: 0; }
+  .role b { display: block; font-size: 22px; line-height: 1.1; }
+  .role small { display: block; font-size: 14px; }
+  .role .tag { font-size: 13px; font-weight: 800; padding: 4px 8px; border-radius: 10px; background: #fff; white-space: nowrap; }
+  .role.mine { outline: 4px solid #fff; outline-offset: 2px; }
+  .role.taken { opacity: .45; }
+  .wait { flex: 1; display: grid; place-items: center; text-align: center; font-size: 20px; line-height: 1.4; opacity: .9; padding: 0 12px; }
+  .wait span { font-size: 52px; display: block; margin-bottom: 8px; }
+  /* name form */
+  form { display: flex; flex-direction: column; gap: 12px; margin: auto 0; }
+  label { font-size: 18px; font-weight: 700; }
+  input { font: 700 22px var(--font); padding: 14px 16px; border-radius: 14px; border: 3px solid var(--ink); background: var(--cream); color: var(--ink); outline: none; }
+  input:focus { box-shadow: 0 0 0 3px #ffd23f; }
+  .go { font: 800 22px var(--font); padding: 14px; border-radius: 16px; border: 3px solid var(--ink); background: #ff8fb1; color: #fff; box-shadow: inset 0 -6px 0 #d9628f, 0 4px 0 #000a; }
+  .link { background: none; border: 0; color: var(--cream); font: 600 14px var(--font); text-decoration: underline; opacity: .7; padding: 0; }
+  .cardwrap { flex: 1; min-height: 0; display: grid; place-items: center; }
+  .card20 { max-width: 100%; max-height: 100%; border-radius: 14px; box-shadow: 0 8px 24px #0008; -webkit-touch-callout: default; user-select: auto; }
+  .dl { text-align: center; text-decoration: none; }
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="ava" id="ava">🙂</div>
+  <div class="who"><b id="name">Tiệm Hoa 20/10</b><small id="sub">Tay cầm điện thoại</small></div>
+  <div class="dot" id="dot" title="Kết nối"></div>
+</header>
+<div class="status" id="status">Đang kết nối…</div>
+<main id="main"></main>
+<script type="module">
+import { ROLES, ROUNDS } from './js/controls.js';
+import { drawCard } from './js/card.js';
+const BUSY = new Set(['count', 'play', 'paused', 'ending']); // roles are locked while a round runs
+const STATE_TEXT = { intro: 'Chọn vai rồi chờ quản trò bắt đầu', demo: 'Đang xem demo trên màn hình lớn', count: 'Chuẩn bị… 3 · 2 · 1', play: 'ĐANG CHƠI — bấm nút!', paused: 'Tạm dừng', ending: 'Hết vòng!', result: 'Xem điểm trên màn hình lớn · có thể đổi vai' };
+
+const $ = id => document.getElementById(id);
+const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } } };
+let pid = store.get('thoa_pid'); if (!pid) { pid = Math.random().toString(36).slice(2, 12); store.set('thoa_pid', pid); }
+let myName = store.get('thoa_name') || '';
+let ws = null, offset = 0, bestRtt = 1e9, state = null, view = '', picking = false, myCard = null, editingTeam = false;
+const escH = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const held = new Map(); // pointerId -> button
+const send = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+const hostNow = () => performance.now() + offset;
+
+function connect() {
+  ws = new WebSocket(`ws://${location.host}/ws?role=pad&pid=${pid}`);
+  ws.onopen = () => {
+    $('dot').classList.add('ok'); bestRtt = 1e9;
+    if (myName) send({ t: 'hello', name: myName });
+    for (let i = 0; i < 6; i++) setTimeout(() => send({ t: 'sync', c: performance.now() }), i * 150);
+    render();
+  };
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.t === 'sync') { const now = performance.now(), rtt = now - m.c; if (rtt < bestRtt) { bestRtt = rtt; offset = m.h + rtt / 2 - now; } }
+    if (m.t === 'state') { state = m; render(); }
+    if (m.t === 'buzz' && navigator.vibrate) navigator.vibrate(m.p); // the big screen taps you on the shoulder (Android; iPhones ignore it)
+    if (m.t === 'card') { myCard = m; view = ''; if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 120]); render(); } // personal 20/10 card at the finale
+    if (m.t === 'kicked') { ws.onclose = null; ws.close(); $('dot').classList.remove('ok'); $('status').textContent = 'Tay cầm này đã mở ở tab khác'; }
+  };
+  ws.onclose = () => { $('dot').classList.remove('ok'); $('status').textContent = 'Mất kết nối… đang nối lại'; releaseAll(); setTimeout(connect, 1000); };
+}
+setInterval(() => send({ t: 'sync', c: performance.now() }), 8000);
+
+const myRole = () => state ? state.roles.findIndex(r => r && r.pid === pid) : -1;
+
+function render() {
+  const role = myRole(), R = ROLES[role], round = state && ROUNDS[state.scene];
+  document.documentElement.style.setProperty('--c', R ? R.c : '#b79ced');
+  document.documentElement.style.setProperty('--cd', R ? R.cd : '#8b6bd0');
+  $('ava').textContent = R ? R.icon : '🙂';
+  $('name').textContent = myName || 'Chưa có tên';
+  $('sub').textContent = (R ? `Vai ${R.name} · ${R.paint}` : 'Chưa chọn vai') + (state && state.team ? ` · Đội ${state.team}` : '');
+  const st = $('status');
+  st.classList.toggle('play', !!state && state.state === 'play' && role >= 0);
+  const watching = round && BUSY.has(state.state) && role < 0;
+  st.textContent = !state ? 'Đang kết nối…' : round ? `${round.title} — ${watching ? 'các bạn khác đang chơi' : STATE_TEXT[state.state] || ''}` : 'Chọn vai rồi nhìn lên màn hình lớn';
+
+  // which screen: name form → buttons (round running) → key test on the intro card (role chosen) → role picker
+  let next;
+  const between = state && round && (state.state === 'intro' || state.state === 'result');
+  if (state && BUSY.has(state.state)) { picking = false; editingTeam = false; }
+  if (role !== 2) editingTeam = false;
+  if (!myName) next = 'name';
+  else if (state && state.scene === 'final' && myCard) next = 'card';
+  else if (editingTeam) next = 'team';
+  else if (state && round && BUSY.has(state.state)) next = role >= 0 ? 'pad:' + state.scene + ':' + role : 'spectate';
+  else if (between && role >= 0 && !picking) next = 'ready:' + state.scene + ':' + role;
+  else next = 'pick';
+  if (next === 'card') st.textContent = '💌 Thiệp 20/10 của bạn — lưu lại làm kỷ niệm nhé!';
+  document.body.classList.toggle('playing', next.startsWith('pad') || next.startsWith('ready'));
+  if (next === view && next !== 'pick') return;
+  if (!next.startsWith('pad') && !next.startsWith('ready')) releaseAll();
+  view = next;
+  const main = $('main');
+  if (next === 'name') {
+    main.innerHTML = `<form id="f"><label for="nm">Tên của bạn</label><input id="nm" maxlength="14" autocomplete="off" placeholder="VD: Hương" value=""><button class="go">Vào chơi 🌸</button></form>`;
+    $('f').addEventListener('submit', e => { e.preventDefault(); const v = $('nm').value.trim().slice(0, 14); if (!v) return; myName = v; store.set('thoa_name', v); send({ t: 'hello', name: v }); render(); });
+    return;
+  }
+  if (next === 'card') {
+    const url = drawCard(myCard);
+    main.innerHTML = `<div class="cardwrap"><img class="card20" src="${url}" alt="Thiệp 20/10"></div>
+      <a class="go dl" href="${url}" download="thiep-20-10-${myCard.name.replace(/[^\p{L}\p{N}]+/gu, '-')}.png">⬇️ Lưu ảnh thiệp</a>
+      <div class="hint">iPhone: nhấn giữ vào ảnh → “Lưu vào Ảnh”</div>`;
+    return;
+  }
+  if (next === 'team') { // Lan names the team
+    main.innerHTML = `<form id="tf"><label for="tn">Tên đội</label><input id="tn" maxlength="24" autocomplete="off" placeholder="VD: Hoa Hướng Dương" value="${escH(state && state.team || '')}">
+      <button class="go">Lưu tên đội 🏷️</button><button class="link" type="button" id="tc">Huỷ</button></form>`;
+    $('tf').addEventListener('submit', e => { e.preventDefault(); send({ t: 'team', name: $('tn').value.trim().slice(0, 24) }); editingTeam = false; view = ''; render(); });
+    $('tc').addEventListener('click', () => { editingTeam = false; view = ''; render(); });
+    return;
+  }
+  if (next === 'spectate') { main.innerHTML = '<div class="wait"><div><span>👀</span>Vòng này bạn đang xem.<br>Chọn vai ở vòng sau nhé!</div></div>'; return; }
+  if (next === 'pick') {
+    const roles = state ? state.roles : [null, null, null];
+    main.innerHTML = `<div class="hint">${round ? 'Chọn vai cho <b>' + round.title + '</b>' : 'Chọn vai trước khi vào vòng'} · bấm lại để bỏ</div>
+      <div class="roles">${ROLES.map((r, i) => {
+        const h = roles[i], mine = h && h.pid === pid, taken = h && !mine && h.on; // an absent holder's role can be taken over
+        const what = round ? round.roles[i].d : r.paint;
+        return `<button class="role ${mine ? 'mine' : ''} ${taken ? 'taken' : ''}" data-r="${i}" style="--rc:${r.c}" ${taken ? 'disabled' : ''}>
+          <span class="ic">${r.icon}</span><span class="tx"><b>${r.name}</b><small>${what}</small></span>
+          <span class="tag">${mine ? 'Bạn ✓' : taken ? h.name : h ? h.name + ' (vắng)' : 'Trống'}</span></button>`;
+      }).join('')}</div>
+      ${myRole() === 2 ? '<button class="link" id="teamBtn">🏷️ Đặt tên đội (vai Lan)</button>' : ''}
+      <button class="link" id="rename">Đổi tên</button>`;
+    $('teamBtn')?.addEventListener('click', () => { editingTeam = true; view = ''; render(); });
+    main.querySelectorAll('.role').forEach(b => b.addEventListener('click', () => { picking = false; send({ t: 'pick', role: +b.dataset.r === myRole() ? -1 : +b.dataset.r }); if (navigator.vibrate) navigator.vibrate(10); }));
+    $('rename').addEventListener('click', () => { myName = ''; render(); });
+    return;
+  }
+  const L = round.roles[role];
+  main.innerHTML = (next.startsWith('ready') ? `<div class="hint">Bấm thử nút — nhân vật <b>${ROLES[role].name}</b> trên màn hình lớn sẽ nhảy lên ✓</div>` : '')
+    + `<div class="pad ${L.col ? 'col' : ''}" id="pad">${L.b.map(b => `<button class="btn" data-k="${b.k}">${b.l}<small>${b.s}</small></button>`).join('')}</div>`
+    + (next.startsWith('ready') ? `<button class="link" id="swap">Đổi vai</button>${role === 2 ? ' · <button class="link" id="teamBtn">🏷️ Đặt tên đội</button>' : ''}` : '');
+  $('teamBtn')?.addEventListener('click', () => { editingTeam = true; view = ''; render(); });
+  $('swap')?.addEventListener('click', () => { picking = true; render(); });
+  const pad = $('pad');
+  pad.addEventListener('pointerdown', e => {
+    const b = e.target.closest('.btn'); if (!b) return;
+    e.preventDefault(); b.setPointerCapture(e.pointerId);
+    held.set(e.pointerId, b); b.classList.add('on');
+    send({ t: 'key', code: b.dataset.k, down: true, ts: hostNow() });
+    if (navigator.vibrate) navigator.vibrate(12);
+  });
+  const up = e => {
+    const b = held.get(e.pointerId); if (!b) return;
+    held.delete(e.pointerId);
+    if (![...held.values()].includes(b)) { b.classList.remove('on'); send({ t: 'key', code: b.dataset.k, down: false, ts: hostNow() }); }
+  };
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(n => pad.addEventListener(n, up));
+}
+function releaseAll() { for (const b of new Set(held.values())) { b.classList.remove('on'); send({ t: 'key', code: b.dataset.k, down: false, ts: hostNow() }); } held.clear(); }
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
+document.addEventListener('contextmenu', e => e.preventDefault());
+render();
+connect();
+</script>
+</body>
+</html>

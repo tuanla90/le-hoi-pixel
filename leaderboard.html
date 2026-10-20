@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2c1f2e">
+<title>Bảng xếp hạng · Tiệm Hoa 20/10</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Leaderboard for online rooms: best result per team, filtered by the difficulty most rounds were played at. */
+  :root { --ink: #3b2a3a; --cream: #fff6e3; --pink: #ff8fb1; --pinkD: #d9628f; --lav: #b79ced; --mint: #6fd3b8; --mintD: #3fa88e; --gold: #ffd23f; --bg: #2c1f2e;
+    --font: "Baloo 2", "Trebuchet MS", "Segoe UI", system-ui, sans-serif; color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: linear-gradient(#ffe3ec, #fff6e3 40%, #ffe3ec); color: var(--ink); font-family: var(--font); }
+  main { max-width: 860px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: clamp(26px, 6vw, 40px); color: var(--pinkD); line-height: 1.05; }
+  header a { margin-left: auto; color: var(--ink); font-weight: 700; text-decoration: none; background: #fff; border: 3px solid var(--ink); border-radius: 14px; padding: 6px 14px; box-shadow: 0 3px 0 var(--ink); }
+  .sub { margin: 4px 0 16px; opacity: .8; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .bar[hidden] { display: none; }
+  .seg { font: 700 15px var(--font); border: 3px solid var(--ink); background: #fff; color: var(--ink); border-radius: 12px; padding: 4px 12px; cursor: pointer; box-shadow: 0 3px 0 var(--ink); }
+  .seg.on { background: var(--pink); color: #fff; }
+  .seg:focus-visible { outline: 3px solid var(--lav); outline-offset: 2px; }
+  .card { background: #fff; border: 3px solid var(--ink); border-radius: 18px; box-shadow: 0 5px 0 var(--ink); overflow: hidden; margin-top: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 2px solid #f3e3ea; vertical-align: top; }
+  th { background: var(--cream); font-size: 14px; }
+  td.n { width: 46px; font-weight: 800; font-size: 20px; text-align: center; }
+  tr:nth-child(1) td.n { color: #c9961a; } tr:nth-child(2) td.n { color: #8a8f9e; } tr:nth-child(3) td.n { color: #b06a3a; }
+  .team { font-weight: 800; font-size: 17px; }
+  .mem { font-size: 13px; opacity: .75; }
+  .pts { font-weight: 800; font-size: 20px; text-align: right; white-space: nowrap; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 0 8px; border-radius: 8px; background: var(--cream); margin-top: 2px; }
+  .when { font-size: 12px; opacity: .6; }
+  .rounds { font-size: 12px; opacity: .8; }
+  .empty { padding: 30px; text-align: center; opacity: .75; }
+  @media (max-width: 560px) { .hide-sm { display: none; } th, td { padding: 8px; } }
+</style>
+</head>
+<body>
+<main>
+  <header><h1>🏆 Bảng xếp hạng</h1><a href="/">🌷 Vào chơi</a></header>
+  <p class="sub">Tiệm Hoa 20/10 · điểm cao nhất của mỗi đội trong các ván online đủ 5 vòng. Độ khó tính theo mức được chọn ở nhiều vòng nhất.</p>
+  <div class="bar" id="mode"><button class="seg on" data-mode="total">Tổng 5 vòng</button><button class="seg" data-mode="rounds">Từng vòng</button></div>
+  <div class="bar" id="diff"><button class="seg on" data-diff="all">Mọi độ khó</button><button class="seg" data-diff="easy">🌼 Dễ</button><button class="seg" data-diff="normal">🌷 Thường</button><button class="seg" data-diff="hard">🔥 Thử thách</button></div>
+  <div class="bar" id="period"><button class="seg on" data-period="all">Mọi lúc</button><button class="seg" data-period="week">7 ngày qua</button></div>
+  <div class="bar" id="round" hidden></div>
+  <div class="card" id="out"><div class="empty">Đang tải…</div></div>
+</main>
+<script>
+const ROUNDS = [['garden', '🌱 Trồng cây'], ['carry', '🌿 Bê cây'], ['drive', '🚚 Chở cây'], ['sign', '🎨 Làm biển hiệu'], ['shop', '💐 Ngày khai trương']];
+const DIFF = { easy: '🌼 Dễ', normal: '🌷 Thường', hard: '🔥 Thử thách' };
+const st = { mode: 'total', diff: 'all', period: 'all', round: 'garden' };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const when = t => new Date(t).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+document.getElementById('round').innerHTML = ROUNDS.map(([id, n], i) => `<button class="seg ${i ? '' : 'on'}" data-round="${id}">${n}</button>`).join('');
+for (const bar of ['mode', 'diff', 'period', 'round']) {
+  document.getElementById(bar).addEventListener('click', e => {
+    const b = e.target.closest('.seg'); if (!b) return;
+    st[bar] = b.dataset[bar];
+    b.parentElement.querySelectorAll('.seg').forEach(x => x.classList.toggle('on', x === b));
+    document.getElementById('round').hidden = st.mode !== 'rounds';
+    load();
+  });
+}
+async function load() {
+  const out = document.getElementById('out');
+  out.innerHTML = '<div class="empty">Đang tải…</div>';
+  try {
+    const q = new URLSearchParams({ diff: st.diff, period: st.period });
+    if (st.mode === 'rounds') q.set('round', st.round);
+    const r = await fetch((st.mode === 'rounds' ? '/api/leaderboard/rounds?' : '/api/leaderboard?') + q, { cache: 'no-store' });
+    const list = await r.json();
+    if (!list.length) { out.innerHTML = '<div class="empty">Chưa có đội nào — vào chơi một ván online đủ 5 vòng để mở hàng nhé! 🌸</div>'; return; }
+    if (st.mode === 'total') {
+      out.innerHTML = `<table><thead><tr><th>#</th><th>Đội</th><th class="hide-sm">Từng vòng</th><th style="text-align:right">Điểm</th></tr></thead><tbody>${list.map(e => `
+        <tr><td class="n">${e.rank}</td>
+          <td><div class="team">${esc(e.team)}</div><div class="mem">${esc(e.members.join(' · '))}</div><span class="tag">${DIFF[e.mainDiff] || ''}</span> <span class="when">${when(e.at)}</span><div class="tag">${esc(e.rankName)}</div></td>
+          <td class="hide-sm rounds">${ROUNDS.map(([id, n]) => `${n.split(' ')[0]} ${e.scores[id] ?? '—'}`).join('<br>')}</td>
+          <td class="pts">${e.total}</td></tr>`).join('')}</tbody></table>`;
+    } else {
+      out.innerHTML = `<table><thead><tr><th>#</th><th>Đội</th><th style="text-align:right">Điểm vòng</th></tr></thead><tbody>${list.map(e => `
+        <tr><td class="n">${e.rank}</td><td><div class="team">${esc(e.team)}</div><div class="mem">${esc(e.members.join(' · '))}</div><span class="tag">${DIFF[e.diff] || ''}</span> <span class="when">${when(e.at)}</span></td><td class="pts">${e.score}</td></tr>`).join('')}</tbody></table>`;
+    }
+  } catch (e) { out.innerHTML = '<div class="empty">Không tải được bảng xếp hạng. Thử lại sau nhé.</div>'; }
+}
+load();
+</script>
+</body>
+</html>

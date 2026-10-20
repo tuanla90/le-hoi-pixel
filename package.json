@@ -1,0 +1,9 @@
+{
+  "name": "tiem-hoa-20-10",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tiệm Hoa 20/10 — co-op party game (LAN phones or online rooms)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}

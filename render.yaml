@@ -1,0 +1,18 @@
+# Render Blueprint: New → Blueprint → pick this repo. Free web service, no build step.
+services:
+  - type: web
+    name: tiem-hoa-20-10
+    runtime: node
+    plan: free
+    buildCommand: "echo no build"
+    startCommand: node server.js
+    healthCheckPath: /api/ping
+    envVars:
+      - key: PUBLIC
+        value: "1"
+      # Optional: keep the leaderboard across restarts (Render's free disk is wiped) — create a free Upstash Redis
+      # database and paste its REST URL and token here.
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
