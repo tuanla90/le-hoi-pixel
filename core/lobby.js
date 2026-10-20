@@ -1,7 +1,7 @@
 // "Kết nối điện thoại" overlay: one QR for everyone, live list of who holds which role.
 import { game, el, uiRoot, setTeam, TEAM_MAX } from './main.js';
 import { net, onNet, padURL, CAPTAIN } from './net.js';
-import { theme } from './theme.js';
+import { theme, themeList } from './theme.js';
 
 function qrImg(text) {
   if (!text || typeof window.qrcode !== 'function') return '';
@@ -72,4 +72,21 @@ export function openTeamDialog(then) {
   box.querySelector('[data-x]').addEventListener('click', close);
   game.modal = { close };
   setTimeout(() => { input.focus(); input.select(); }, 30);
+}
+
+// "Chủ đề khác": every festival in themes/themes.json; picking one reloads the big screen into it
+// (phones on the LAN follow by themselves). Not offered in an online room, where everyone must play the same theme.
+export async function openThemePicker() {
+  if (game.modal) return;
+  game.modal = { close() {} }; // claimed while the list loads
+  const list = await themeList();
+  const box = el(`<div class="lobby"><div class="card lobby-card pop"><div class="ribbon">🎭 Chọn chủ đề</div>
+    <div class="theme-list">${list.map(t => `<button class="btn ${t.id === theme.id ? '' : 'alt'} theme-btn" data-theme="${esc(t.id)}">${esc(t.name)}${t.id === theme.id ? ' <small>· đang chơi</small>' : ''}<small class="theme-rounds">${t.rounds.length} vòng: ${t.rounds.map(r => esc(r[1])).join(' · ')}</small></button>`).join('')}</div>
+    <div class="btns"><button class="btn alt" data-x>Đóng <span class="key">Esc</span></button></div></div></div>`);
+  uiRoot.appendChild(box);
+  const close = () => { box.remove(); game.modal = null; };
+  box.querySelectorAll('[data-theme]').forEach(b => b.addEventListener('click', () => { if (b.dataset.theme === theme.id) close(); else location.href = `/?theme=${encodeURIComponent(b.dataset.theme)}`; }));
+  box.querySelector('[data-x]').addEventListener('click', close);
+  box.addEventListener('click', e => { if (e.target === box) close(); });
+  game.modal = { close };
 }

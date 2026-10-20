@@ -5,8 +5,9 @@ Bộ mini game pixel chơi theo đội 3 người, mỗi dịp lễ một chủ 
 | Chủ đề | Thư mục | Mở | Nội dung |
 |---|---|---|---|
 | 🌸 Tiệm Hoa 20/10 | [themes/20-10](themes/20-10/README.md) | `/?theme=20-10` | Ba chị em Đào · Mai · Lan mở tiệm hoa qua 5 vòng |
+| 🎃 Đêm Halloween | [themes/halloween](themes/halloween/README.md) | `/?theme=halloween` | Ba bạn nhỏ hoá trang Bí · Dơi · Mèo qua 3 vòng: vườn bí ngô, soi đèn đuổi ma, tiệm thuốc phù thủy |
 
-Không ghi `?theme=` thì game mở chủ đề đầu tiên trong [themes/themes.json](themes/themes.json).
+Không ghi `?theme=` thì game mở chủ đề đầu tiên trong [themes/themes.json](themes/themes.json). Ở màn hình chính, nút **🎭 Chủ đề khác** mở danh sách chủ đề (không có khi đang trong phòng online, vì cả phòng phải chơi cùng một chủ đề).
 
 ## Chạy game
 
@@ -100,7 +101,9 @@ core/                      lõi dùng chung, không nhắc tới dịp lễ nào
   gfx.js, ui-sprites.js    bảng màu, vẽ pixel, hạt; icon dùng chung (sao, tim, nốt nhạc)
   audio.js, detmath.js     âm thanh WebAudio; toán và ngẫu nhiên tất định cho lockstep
 mechanics/                 khuôn luật chơi dùng lại được, chủ đề chỉ đưa vào tên, chữ và hình
-  assembly-line.js         dây chuyền 3 khâu phục vụ khách (vòng 5 của 20/10)
+  grid-care.js             lưới 4×4: hai người đưa khung, một người dùng đúng dụng cụ (20/10 vòng 1, Halloween vòng 1)
+  beam-guard.js            ba đèn pin xoay đuổi thứ bò tới từ bóng tối, ma to cần nhiều đèn (Halloween vòng 2)
+  assembly-line.js         dây chuyền 3 khâu phục vụ khách (20/10 vòng 5, Halloween vòng 3)
 themes/
   themes.json              danh mục chủ đề và id các vòng (máy chủ và bảng xếp hạng đọc file này)
   20-10/
@@ -108,7 +111,8 @@ themes/
     meta.js                phần nhẹ, điện thoại cũng tải: tên, 3 vai, nút bấm từng vòng
     card.js                vẽ thiệp cá nhân cuối ván
     sprites.js, world.js   pixel art vẽ bằng code
-    scenes/                màn chính, 5 vòng chơi, màn tổng kết (shop.js chỉ là bộ áo của khuôn dây chuyền)
+    scenes/                màn chính, 5 vòng chơi, màn tổng kết (garden.js, shop.js chỉ là bộ áo của khuôn)
+  halloween/               cùng cấu trúc: 3 vòng, đều là bộ áo của khuôn trong mechanics/
     sprites.html           xem toàn bộ sprite khi chỉnh đồ hoạ
     thiep-moi.html         thiệp mời sự kiện
 ```
@@ -116,7 +120,7 @@ themes/
 ## Thêm một chủ đề mới
 
 1. Chép thư mục `themes/20-10` thành `themes/<id>` (ví dụ `themes/noel`). Đổi tên, vai và nút bấm trong `meta.js`, danh sách vòng trong `theme.js`.
-2. Thêm một mục vào `themes/themes.json`: `id`, `name` và `rounds` (id + nhãn từng vòng, đúng thứ tự trong `theme.js`). Máy chủ dùng danh sách này để nhận điểm lên bảng xếp hạng.
+2. Thêm một mục vào `themes/themes.json`: `id`, `name` và `rounds` (id + nhãn từng vòng, đúng thứ tự trong `theme.js`). Máy chủ đọc danh sách này lúc khởi động (để ghi chủ đề cho phòng online và nhận điểm lên bảng xếp hạng), nên thêm chủ đề xong thì khởi động lại `server.js`.
 3. Vẽ lại `sprites.js` và mẫu thiệp trong `card.js`. Vòng nào dùng khuôn trong `mechanics/` thì chỉ cần viết bộ áo: tên món, chữ, hình (xem `themes/20-10/scenes/shop.js` cho khuôn dây chuyền). Các vòng khác viết lại màn trong `scenes/`.
 4. Mở `/?theme=<id>` để chơi thử. Kỷ lục, độ khó và tên đội của mỗi chủ đề được lưu riêng (`store` trong `theme.js`, mặc định `lhp_<id>_`).
 

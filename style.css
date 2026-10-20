@@ -337,3 +337,20 @@ body.online.side { place-items: center start; }
 #controls.side .ctl-btns { flex-direction: column; }
 #controls.side .ctl-name { white-space: normal; font-size: 11px; }
 #controls.side .ctl-btn span { font-size: 24px; }
+
+/* ---------- theme picker (core/lobby.js) ---------- */
+.theme-list { display: flex; flex-direction: column; gap: calc(var(--u) * 4); width: 100%; }
+.theme-btn { display: flex; flex-direction: column; align-items: flex-start; text-align: left; width: 100%; }
+.theme-btn small { font-size: calc(var(--u) * 5.5); font-weight: 700; }
+.theme-btn .theme-rounds { opacity: .8; font-weight: 600; }
+
+/* ---------- Đêm Halloween (themes/halloween): orange logo on the night sky ---------- */
+.hw .logo .l1 { color: #e8e0ff; }
+.hw .logo .l2 { color: #ff9a3c; }
+.hw .logo .l2 i { color: #ffe066; }
+.hw .logo .l1, .hw .logo .l2 { text-shadow: 0 calc(var(--u) * 1.5) 0 #7e5bc2, calc(var(--u) * 1.5) 0 0 var(--ink), calc(var(--u) * -1.5) 0 0 var(--ink), 0 calc(var(--u) * -1.5) 0 var(--ink), 0 calc(var(--u) * 3) 0 var(--ink), calc(var(--u) * 1.5) calc(var(--u) * 3) 0 var(--ink), calc(var(--u) * -1.5) calc(var(--u) * 3) 0 var(--ink); }
+.hw .logo .sub { background: #7e5bc2; }
+.hw .menu .hint { background: #fff6e3dd; }
+.hw .opening { left: calc(var(--u) * 40); text-shadow: 0 calc(var(--u) * 1.2) 0 #d0722b, calc(var(--u) * 1.2) 0 0 var(--ink), calc(var(--u) * -1.2) 0 0 var(--ink), 0 calc(var(--u) * -1.2) 0 var(--ink), 0 calc(var(--u) * 2.4) 0 var(--ink); }
+.menu .row { display: flex; gap: calc(var(--u) * 3); }
+.menu .row .btn { flex: 1; min-width: 0; padding-left: calc(var(--u) * 2); padding-right: calc(var(--u) * 2); }

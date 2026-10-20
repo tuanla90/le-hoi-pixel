@@ -20,6 +20,7 @@
 //     extra(g, i, cx, cy, scale, alpha)        one extra icon, centred
 //     product(g, x, y, parts, done, scale)     the order in progress (done: { extraId: true })
 //     customer(look, frame)                    sprite of customer look 0–2
+//     hint                                     colour of the hint over an empty ticket rail (optional; for dark rooms)
 //   }
 // }
 import { input, key, W, H, cheer, game } from '../core/main.js';
@@ -310,7 +311,7 @@ export class AssemblyLine extends Round {
       g.fillStyle = col; g.fillRect(x + 4, y + 44, 56, 12); g.font = 'bold 7px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillStyle = C.white; g.fillText(who, x + 32, y + 53);
       g.restore();
     });
-    if (!this.tickets.length) { g.font = 'bold 8px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillStyle = C.outSoft; g.fillText(X.emptyRail, 115, 62); }
+    if (!this.tickets.length) { g.font = 'bold 8px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillStyle = art.hint || C.outSoft; g.fillText(X.emptyRail, 115, 62); }
     // work in progress at each station
     const build = this.tickets.find(k => k.stage === 'build'); if (build) art.product(g, STATION[0], 160, build.parts, {}, 1.3);
     // builds waiting for the runner to carry them on sit at the end of the maker's bench, with a blinking arrow

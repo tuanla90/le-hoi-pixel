@@ -89,6 +89,8 @@ const SONGS = {
   play: { bpm: 140, lead: [72, 76, 79, 76, 81, 79, 76, 74, 72, 74, 76, 79, 77, 76, 74, 0, 72, 76, 79, 84, 81, 79, 76, 79, 77, 76, 74, 72, 74, 0, 72, 0], bass: [48, 48, 55, 55, 53, 53, 50, 50, 48, 48, 55, 55, 53, 55, 48, 48] },
   calm: { bpm: 96, lead: [79, 0, 76, 0, 77, 0, 74, 0, 76, 0, 72, 0, 74, 76, 0, 0, 79, 0, 81, 0, 79, 0, 76, 0, 77, 76, 74, 0, 72, 0, 0, 0], bass: [48, 52, 53, 50, 48, 45, 50, 55, 48, 52, 53, 50, 53, 55, 48, 48] },
 };
+// a theme can replace any of these tunes (title · calm on cards · play during rounds) with its own
+export function setSongs(songs) { Object.assign(SONGS, songs); if (seq && songs[seq.name]) { const n = seq.name; stopMusic(); music(n); } }
 let seq = null;
 export function music(name) {
   if (seq && seq.name === name) return;
