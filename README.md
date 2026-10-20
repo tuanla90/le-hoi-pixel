@@ -99,6 +99,8 @@ core/                      lõi dùng chung, không nhắc tới dịp lễ nào
   online.js                phía trình duyệt khi chơi online: phòng, nút cảm ứng, phát lại sự kiện, thiệp, gửi điểm
   gfx.js, ui-sprites.js    bảng màu, vẽ pixel, hạt; icon dùng chung (sao, tim, nốt nhạc)
   audio.js, detmath.js     âm thanh WebAudio; toán và ngẫu nhiên tất định cho lockstep
+mechanics/                 khuôn luật chơi dùng lại được, chủ đề chỉ đưa vào tên, chữ và hình
+  assembly-line.js         dây chuyền 3 khâu phục vụ khách (vòng 5 của 20/10)
 themes/
   themes.json              danh mục chủ đề và id các vòng (máy chủ và bảng xếp hạng đọc file này)
   20-10/
@@ -106,7 +108,7 @@ themes/
     meta.js                phần nhẹ, điện thoại cũng tải: tên, 3 vai, nút bấm từng vòng
     card.js                vẽ thiệp cá nhân cuối ván
     sprites.js, world.js   pixel art vẽ bằng code
-    scenes/                màn chính, 5 vòng chơi, màn tổng kết
+    scenes/                màn chính, 5 vòng chơi, màn tổng kết (shop.js chỉ là bộ áo của khuôn dây chuyền)
     sprites.html           xem toàn bộ sprite khi chỉnh đồ hoạ
     thiep-moi.html         thiệp mời sự kiện
 ```
@@ -115,7 +117,7 @@ themes/
 
 1. Chép thư mục `themes/20-10` thành `themes/<id>` (ví dụ `themes/noel`). Đổi tên, vai và nút bấm trong `meta.js`, danh sách vòng trong `theme.js`.
 2. Thêm một mục vào `themes/themes.json`: `id`, `name` và `rounds` (id + nhãn từng vòng, đúng thứ tự trong `theme.js`). Máy chủ dùng danh sách này để nhận điểm lên bảng xếp hạng.
-3. Vẽ lại `sprites.js`, viết lại các màn trong `scenes/` (có thể giữ luật của vòng cũ, chỉ thay hình và chữ) và mẫu thiệp trong `card.js`.
+3. Vẽ lại `sprites.js` và mẫu thiệp trong `card.js`. Vòng nào dùng khuôn trong `mechanics/` thì chỉ cần viết bộ áo: tên món, chữ, hình (xem `themes/20-10/scenes/shop.js` cho khuôn dây chuyền). Các vòng khác viết lại màn trong `scenes/`.
 4. Mở `/?theme=<id>` để chơi thử. Kỷ lục, độ khó và tên đội của mỗi chủ đề được lưu riêng (`store` trong `theme.js`, mặc định `lhp_<id>_`).
 
 Lõi luôn coi vai thứ ba (số 2) là đội trưởng: người giữ vai này được đặt tên đội trên điện thoại.
