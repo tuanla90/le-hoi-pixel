@@ -1,6 +1,6 @@
 // Shared flow for every mini game: intro card → 3·2·1 → play → result card.
 // The intro card also picks the round's difficulty and can play a ~30s guided demo.
-import { game, go, input, K, el, img, uiRoot, cheer, bestKey, DIFF_NAME, DIFF_MULT, DIFF_ICON, DIFFS, diffOf, setDiffOf, softCap, onTeam, teamTag } from './main.js';
+import { game, go, input, K, el, img, uiRoot, cheer, bestKey, DIFF_NAME, DIFF_MULT, DIFF_ICON, DIFFS, diffOf, setDiffOf, softCap, onTeam, teamTag, board } from './main.js';
 import { C } from './gfx.js';
 import * as A from './audio.js';
 import { star, starEmpty } from './ui-sprites.js';
@@ -50,7 +50,7 @@ export class Round {
     const seg = d => `<button class="seg ${game.diff === d ? 'on' : ''}" data-act="diff:${d}">${DIFF_ICON[d]} ${DIFF_NAME[d]} <small>×${DIFF_MULT[d].toFixed(1)}</small></button>`;
     this.card(`
       <div class="card intro pop">
-        <div class="ribbon">${c ? `Vòng ${this.meta.num}/${rounds().length}` : 'Luyện tập'}${teamTag() ? ` · ${esc(teamTag())}` : ''}</div>
+        <div class="ribbon">${c ? `Vòng ${this.meta.num}/${rounds().length}` : board.on ? '⚔️ Đấu PvP' : 'Luyện tập'}${teamTag() ? ` · ${esc(teamTag())}` : ''}</div>
         <h1>${this.meta.title}</h1>
         <p class="lead">${this.desc}</p>
         <div class="roles">${roles}</div>
@@ -206,6 +206,8 @@ export class Round {
   // ------------------------------------------------ main update
   update(dt) {
     this.stateT += dt;
+    // a PvP board: the PvP page runs the menus, so no card or pause reacts to keys (Space also brakes the truck…)
+    if (board.on && (this.state === 'intro' || this.state === 'result' || this.state === 'paused')) { this.idle && this.idle(dt); if (this.state === 'intro') this.keyTest(); return; }
     if (this.state === 'intro') {
       this.idle && this.idle(dt);
       // phones pick their roles while the intro card is up: keep the names on the card live
@@ -231,7 +233,7 @@ export class Round {
       return;
     }
     if (this.state === 'play') {
-      if (input.hit(...K.back)) { this.pause(); return; }
+      if (input.hit(...K.back) && !board.on) { this.pause(); return; }
       this.t += dt;
       this.play(dt);
       return;
@@ -289,7 +291,8 @@ export class Round {
       game.campaign.scores[this.id] = this.result.score; (game.campaign.diffs ||= {})[this.id] = game.diff;
       (game.campaign.cast ||= {})[this.id] = net.roles.slice(); // who held which role, for the personal cards at the end
     }
-    try {
+    if (board.on) this.result.best = this.result.score; // a PvP round is not a record of this browser's team
+    else try {
       const k = bestKey(this.id), b = +localStorage.getItem(k) || 0;
       this.result.best = Math.max(b, this.result.score); this.result.newBest = this.result.score > b;
       localStorage.setItem(k, this.result.best);

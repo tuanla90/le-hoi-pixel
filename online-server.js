@@ -28,9 +28,10 @@ const clean = (s, n) => String(s ?? '').replace(/[<>&"\u0000-\u001f]/g, '').repl
 function newCode() {
   for (;;) { let c = ''; for (let i = 0; i < 4; i++) c += CODE_CHARS[crypto.randomInt(CODE_CHARS.length)]; if (!rooms.has(c)) return c; }
 }
-function makeRoom(hostPid, theme) {
+// kind 'coop': three players share one game · kind 'pvp': two players race each other on two boards (pvp.html)
+function makeRoom(hostPid, theme, kind) {
   const room = {
-    code: newCode(), host: hostPid, theme: themeOf(theme).id, created: Date.now(), players: new Map(), roles: Array(ROLES).fill(null),
+    code: newCode(), host: hostPid, theme: themeOf(theme).id, kind: kind === 'pvp' ? 'pvp' : 'coop', created: Date.now(), players: new Map(), roles: Array(ROLES).fill(null),
     epoch: 1, t0: Date.now(), seed: crypto.randomInt(1, 2 ** 31), history: [], pending: [], lastStamp: 0,
     lastEventAt: Date.now(), scene: 'title', team: '', hashes: new Map(), hostGoneAt: 0, emptySince: 0, games: new Set(),
   };
@@ -39,7 +40,7 @@ function makeRoom(hostPid, theme) {
 }
 const tickOf = room => Math.floor((Date.now() - room.t0) / TICK_MS);
 const roomInfo = room => ({
-  t: 'room', code: room.code, host: room.host, epoch: room.epoch, roles: room.roles,
+  t: 'room', code: room.code, kind: room.kind, host: room.host, epoch: room.epoch, roles: room.roles,
   players: [...room.players.entries()].map(([pid, p]) => ({ pid, name: p.name, on: !!p.sock })),
 });
 const broadcast = (room, msg) => { const s = JSON.stringify(msg); room.players.forEach(p => p.sock && wsSend(p.sock, s)); };
@@ -69,7 +70,7 @@ function onMessage(room, pid, m) {
     return;
   }
   if (m.t === 'role') {
-    const r = m.role | 0; if (r < 0 || r >= ROLES) return;
+    const r = m.role | 0; if (r < 0 || r >= (room.kind === 'pvp' ? 2 : ROLES)) return;
     const holder = room.roles[r];
     if (holder === pid) room.roles[r] = null;
     else if (!holder || !room.players.get(holder)?.sock || pid === room.host) room.roles[r] = pid; // host may take over any role
@@ -94,8 +95,8 @@ function attach(room, pid, sock, name) {
   room.players.set(pid, { name: clean(name, 14) || old?.name || 'Người chơi', sock });
   room.emptySince = 0; if (pid === room.host) room.hostGoneAt = 0;
   // free roles go to the first players by default, so a 3-player room is ready without fiddling
-  if (!room.roles.includes(pid)) { const free = room.roles.indexOf(null); if (free >= 0) room.roles[free] = pid; }
-  wsSend(sock, { t: 'welcome', code: room.code, theme: room.theme, pid, epoch: room.epoch, seed: room.seed, u: tickOf(room), ev: room.history });
+  if (!room.roles.includes(pid)) { const free = room.roles.indexOf(null); if (free >= 0 && (room.kind !== 'pvp' || free < 2)) room.roles[free] = pid; } // PvP: only two players
+  wsSend(sock, { t: 'welcome', code: room.code, theme: room.theme, kind: room.kind, pid, epoch: room.epoch, seed: room.seed, u: tickOf(room), ev: room.history });
   announce(room);
   wsReader(sock, m => onMessage(room, pid, m), 64 * 1024);
   const gone = () => {
@@ -115,7 +116,7 @@ function upgrade(req, sock, url) {
   let code = (url.searchParams.get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
   let room = code && code !== 'NEW' ? rooms.get(code) : null;
   if (code && code !== 'NEW' && !room) { wsSend(sock, { t: 'err', msg: `Không tìm thấy phòng ${code}` }); sock.end(); return; }
-  if (!room) room = makeRoom(pid, url.searchParams.get('theme'));
+  if (!room) room = makeRoom(pid, url.searchParams.get('theme'), url.searchParams.get('kind'));
   attach(room, pid, sock, name);
 }
 

@@ -82,12 +82,26 @@ Trên Railway, Render (hoặc khi đặt `PUBLIC=1`), chế độ tay cầm cùn
 
 **Thử trên máy mình:** chạy `node server.js`, mở `http://localhost:8020` ở hai cửa sổ hoặc trình duyệt khác nhau, một bên tạo phòng, bên kia vào bằng mã. Hai tab cùng một trình duyệt dùng chung mã người chơi, nên nên dùng hai trình duyệt khác nhau hoặc một cửa sổ ẩn danh.
 
+## Đấu PvP (2 người, 2 bảng song song)
+
+Màn hình chính có nút **⚔️ Đấu PvP** (`/pvp.html?theme=20-10`). Hai người chơi **cùng một vòng** trên hai bảng đặt cạnh nhau, **mỗi người tự điều khiển cả 3 vai**. Hai bảng dùng chung hạt giống ngẫu nhiên: cùng khu vườn, cùng bản đồ, cùng khách. Ai nhiều điểm hơn thì thắng vòng.
+
+- **Thể thức**: *Cả N vòng* (đi hết các vòng của chủ đề) hoặc *Một vòng* (chọn một vòng). Độ khó chọn chung cho cả trận. Thắng trận là người thắng nhiều vòng hơn; nếu hoà số vòng thì so tổng điểm.
+- **Mỗi vòng**: thẻ giới thiệu hiện trên cả hai bảng. Bấm thử phím thì nhân vật trên bảng của mình nhảy lên. Bấm **Bắt đầu** (`Space`), hết giờ thì so điểm rồi **Vòng tiếp theo**. Cuối trận có bảng điểm từng vòng và nút **Đấu lại**.
+- **Trên một máy** (chạy bằng `Choi-game.bat` / `server.js`): bàn phím chỉ đủ cho một người, mặc định là Người chơi 1; đổi sang Người chơi 2 ở thanh dưới. Người còn lại quét **mã QR**, mở tay cầm điện thoại và chọn **Người chơi 1 / 2**. Tay cầm hiện nút của cả 3 vai. Hai người cùng dùng điện thoại cũng được. Chỉ bảng trái phát tiếng, để âm thanh không bị chồng.
+- **Online** (Railway, Render hoặc laptop): bấm **🌐 Đấu online → ✨ Tạo phòng đấu**, rồi gửi mã phòng hoặc link `…/pvp.html?room=ABCD`. Hai người vào đầu tiên là Người chơi 1 và 2, người vào sau được xem. Chủ phòng 👑 chọn luật và bấm các nút. Mỗi người thấy cả hai bảng; trên điện thoại cầm dọc, bảng của mình to ở trên, bảng đối thủ nhỏ hơn bên dưới, nút cảm ứng của cả 3 vai ở cuối màn hình.
+
+Cách làm: mỗi bảng là một `<iframe>` của game ở chế độ bảng (`index.html?board=1`), tức là một bản engine riêng không có menu và không tự chạy. Trang `pvp.html` (`core/pvp.js`) giữ trận đấu và cho cả hai bảng chạy cùng nhịp, 60 lần mỗi giây. Online dùng đúng cách đồng bộ lockstep của phòng chơi chung (phòng loại `pvp` trên máy chủ). Mã người chơi gắn với từng tab, nên hai tab của cùng một trình duyệt cũng đấu với nhau được.
+
+Đã thử: một máy đủ 5 vòng 20/10; tay cầm điện thoại điều khiển bảng phải; online 2 tab, Halloween đủ 3 vòng, có lúc tải lại trang giữa vòng, không lệch trạng thái lần nào; nút cảm ứng trên khung điện thoại; cùng thao tác trên hai bảng cho ra trạng thái giống hệt nhau.
+
 ## Cấu trúc
 
 ```
 index.html, style.css      màn hình lớn (nạp core/main.js)
 pad.html                   tay cầm điện thoại: tải tên vai, nút bấm và mẫu thiệp của chủ đề đang chơi
 leaderboard.html           bảng xếp hạng online, mỗi chủ đề một bảng (?theme=)
+pvp.html                   đấu PvP: hai bảng game song song (iframe ?board=1), trên một máy hoặc online
 server.js                  máy chủ Node không cần thư viện: phát file, chuyển phím từ điện thoại (LAN), gắn phần online
 online-server.js           phòng online (lockstep, mỗi phòng một chủ đề) và API bảng xếp hạng
 ws-lite.js                 WebSocket tối giản dùng chung
@@ -98,6 +112,7 @@ core/                      lõi dùng chung, không nhắc tới dịp lễ nào
   round.js                 luồng mỗi vòng: thẻ giới thiệu → 3·2·1 → chơi → kết quả, HUD, demo, tạm dừng
   net.js, lobby.js         phía màn hình lớn của tay cầm LAN: người chơi, ai giữ vai nào, mã QR, tên đội
   online.js                phía trình duyệt khi chơi online: phòng, nút cảm ứng, phát lại sự kiện, thiệp, gửi điểm
+  pvp.js                   trận PvP: thể thức, chạy hai bảng cùng nhịp, so điểm, tay cầm LAN và phòng online loại pvp
   gfx.js, ui-sprites.js    bảng màu, vẽ pixel, hạt; icon dùng chung (sao, tim, nốt nhạc)
   audio.js, detmath.js     âm thanh WebAudio; toán và ngẫu nhiên tất định cho lockstep
 mechanics/                 khuôn luật chơi dùng lại được, chủ đề chỉ đưa vào tên, chữ và hình

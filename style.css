@@ -354,3 +354,9 @@ body.online.side { place-items: center start; }
 .hw .opening { left: calc(var(--u) * 40); text-shadow: 0 calc(var(--u) * 1.2) 0 #d0722b, calc(var(--u) * 1.2) 0 0 var(--ink), calc(var(--u) * -1.2) 0 0 var(--ink), 0 calc(var(--u) * -1.2) 0 var(--ink), 0 calc(var(--u) * 2.4) 0 var(--ink); }
 .menu .row { display: flex; gap: calc(var(--u) * 3); }
 .menu .row .btn { flex: 1; min-width: 0; padding-left: calc(var(--u) * 2); padding-right: calc(var(--u) * 2); }
+
+/* ---------- PvP board (an iframe inside pvp.html): no menus, no buttons on the cards ---------- */
+body.pvp-board { background: transparent; display: block; }
+body.pvp-board #stage { box-shadow: none; position: absolute; left: 0; top: 0; } /* the frame is exactly the board's size */
+body.pvp-board .result .btns, body.pvp-board .hud-esc, body.pvp-board .result .best,
+body.pvp-board .intro .btns, body.pvp-board .intro .diffbar, body.pvp-board .role-player { display: none; }

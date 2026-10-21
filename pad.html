@@ -55,6 +55,11 @@
   .cardwrap { flex: 1; min-height: 0; display: grid; place-items: center; }
   .card20 { max-width: 100%; max-height: 100%; border-radius: 14px; box-shadow: 0 8px 24px #0008; -webkit-touch-callout: default; user-select: auto; }
   .dl { text-align: center; text-decoration: none; }
+  /* PvP (pvp.html): one player plays all three roles, so every role's buttons in rows */
+  .pvpad { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+  .prow { flex: 1; min-height: 0; display: flex; gap: 10px; }
+  .prow .btn { font-size: 38px; border-radius: 20px; border-width: 3px; box-shadow: inset 0 -7px 0 var(--cd), 0 4px 0 #000a; }
+  .prow .btn small { font-size: 13px; }
   @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
 </style>
 </head>
@@ -80,6 +85,10 @@ async function useTheme(id) {
   } catch (e) { console.error(e); } finally { loadingTheme = ''; }
 }
 const CAPTAIN = 2; // the role that may name the team from its phone (core/net.js)
+// PvP on one computer (pvp.html): the phone picks a board instead of a role, and gets the buttons of all three roles
+const PVP = [{ name: 'Người chơi 1', desc: 'Bảng bên trái', icon: '🟥', c: '#ff7aa2', cd: '#d9507e' }, { name: 'Người chơi 2', desc: 'Bảng bên phải', icon: '🟦', c: '#4aa3ff', cd: '#2f72c9' }];
+const pvp = () => !!state?.pvp;
+const roleList = () => (pvp() ? PVP : T.ROLES);
 const BUSY = new Set(['count', 'play', 'paused', 'ending']); // roles are locked while a round runs
 const STATE_TEXT = { intro: 'Chọn vai rồi chờ quản trò bắt đầu', demo: 'Đang xem demo trên màn hình lớn', count: 'Chuẩn bị… 3 · 2 · 1', play: 'ĐANG CHƠI — bấm nút!', paused: 'Tạm dừng', ending: 'Hết vòng!', result: 'Xem điểm trên màn hình lớn · có thể đổi vai' };
 
@@ -116,22 +125,22 @@ setInterval(() => send({ t: 'sync', c: performance.now() }), 8000);
 const myRole = () => state ? state.roles.findIndex(r => r && r.pid === pid) : -1;
 
 function render() {
-  const role = myRole(), R = T?.ROLES[role], round = state && T?.CONTROLS[state.scene];
+  const role = myRole(), R = T && roleList()[role], round = state && T?.CONTROLS[state.scene];
   document.documentElement.style.setProperty('--c', R ? R.c : '#b79ced');
   document.documentElement.style.setProperty('--cd', R ? R.cd : '#8b6bd0');
   $('ava').textContent = R ? R.icon : '🙂';
   $('name').textContent = myName || 'Chưa có tên';
-  $('sub').textContent = (R ? `Vai ${R.name} · ${R.desc}` : 'Chưa chọn vai') + (state && state.team ? ` · Đội ${state.team}` : '');
+  $('sub').textContent = pvp() ? (R ? `⚔️ Đấu PvP · ${R.desc}` : '⚔️ Đấu PvP · chưa chọn bảng') : (R ? `Vai ${R.name} · ${R.desc}` : 'Chưa chọn vai') + (state && state.team ? ` · Đội ${state.team}` : '');
   const st = $('status');
   st.classList.toggle('play', !!state && state.state === 'play' && role >= 0);
   const watching = round && BUSY.has(state.state) && role < 0;
-  st.textContent = !state ? 'Đang kết nối…' : !T ? 'Đang tải trò chơi…' : round ? `${round.title} — ${watching ? 'các bạn khác đang chơi' : STATE_TEXT[state.state] || ''}` : 'Chọn vai rồi nhìn lên màn hình lớn';
+  st.textContent = !state ? 'Đang kết nối…' : !T ? 'Đang tải trò chơi…' : round ? `${round.title} — ${watching ? 'các bạn khác đang chơi' : STATE_TEXT[state.state] || ''}` : pvp() ? 'Chọn Người chơi 1 hoặc 2 rồi nhìn lên màn hình lớn' : 'Chọn vai rồi nhìn lên màn hình lớn';
 
   // which screen: name form → buttons (round running) → key test on the intro card (role chosen) → role picker
   let next;
   const between = state && round && (state.state === 'intro' || state.state === 'result');
   if (state && BUSY.has(state.state)) { picking = false; editingTeam = false; }
-  if (role !== CAPTAIN) editingTeam = false;
+  if (role !== CAPTAIN || pvp()) editingTeam = false;
   if (!myName) next = 'name';
   else if (!T) next = 'loading';
   else if (state && state.scene === 'final' && myCard) next = 'card';
@@ -168,25 +177,29 @@ function render() {
   if (next === 'spectate') { main.innerHTML = '<div class="wait"><div><span>👀</span>Vòng này bạn đang xem.<br>Chọn vai ở vòng sau nhé!</div></div>'; return; }
   if (next === 'pick') {
     const roles = state ? state.roles : [null, null, null];
-    main.innerHTML = `<div class="hint">${round ? 'Chọn vai cho <b>' + round.title + '</b>' : 'Chọn vai trước khi vào vòng'} · bấm lại để bỏ</div>
-      <div class="roles">${T.ROLES.map((r, i) => {
+    main.innerHTML = `<div class="hint">${pvp() ? 'Chọn bảng của bạn — bạn điều khiển cả 3 vai' : round ? 'Chọn vai cho <b>' + round.title + '</b>' : 'Chọn vai trước khi vào vòng'} · bấm lại để bỏ</div>
+      <div class="roles">${roleList().map((r, i) => {
         const h = roles[i], mine = h && h.pid === pid, taken = h && !mine && h.on; // an absent holder's role can be taken over
-        const what = round ? round.roles[i].d : r.desc;
+        const what = pvp() ? r.desc : round ? round.roles[i].d : r.desc;
         return `<button class="role ${mine ? 'mine' : ''} ${taken ? 'taken' : ''}" data-r="${i}" style="--rc:${r.c}" ${taken ? 'disabled' : ''}>
           <span class="ic">${r.icon}</span><span class="tx"><b>${r.name}</b><small>${what}</small></span>
           <span class="tag">${mine ? 'Bạn ✓' : taken ? h.name : h ? h.name + ' (vắng)' : 'Trống'}</span></button>`;
       }).join('')}</div>
-      ${myRole() === CAPTAIN ? `<button class="link" id="teamBtn">🏷️ Đặt tên đội (vai ${T.ROLES[CAPTAIN].name})</button>` : ''}
+      ${myRole() === CAPTAIN && !pvp() ? `<button class="link" id="teamBtn">🏷️ Đặt tên đội (vai ${T.ROLES[CAPTAIN].name})</button>` : ''}
       <button class="link" id="rename">Đổi tên</button>`;
     $('teamBtn')?.addEventListener('click', () => { editingTeam = true; view = ''; render(); });
     main.querySelectorAll('.role').forEach(b => b.addEventListener('click', () => { picking = false; send({ t: 'pick', role: +b.dataset.r === myRole() ? -1 : +b.dataset.r }); if (navigator.vibrate) navigator.vibrate(10); }));
     $('rename').addEventListener('click', () => { myName = ''; render(); });
     return;
   }
-  const L = round.roles[role];
-  main.innerHTML = (next.startsWith('ready') ? `<div class="hint">Bấm thử nút — nhân vật <b>${T.ROLES[role].name}</b> trên màn hình lớn sẽ nhảy lên ✓</div>` : '')
-    + `<div class="pad ${L.col ? 'col' : ''}" id="pad">${L.b.map(b => `<button class="btn" data-k="${b.k}">${b.l}<small>${b.s}</small></button>`).join('')}</div>`
-    + (next.startsWith('ready') ? `<button class="link" id="swap">Đổi vai</button>${role === CAPTAIN ? ' · <button class="link" id="teamBtn">🏷️ Đặt tên đội</button>' : ''}` : '');
+  const L = round.roles[role], ready = next.startsWith('ready'), btn = b => `<button class="btn" data-k="${b.k}">${b.l}<small>${b.s}</small></button>`;
+  main.innerHTML = pvp()
+    ? (ready ? '<div class="hint">Bấm thử nút — nhân vật trên bảng của bạn sẽ nhảy lên ✓</div>' : '')
+      + `<div class="pvpad" id="pad">${round.roles.map((rl, i) => `<div class="prow" style="--c:${T.ROLES[i].c};--cd:${T.ROLES[i].cd}">${rl.b.map(btn).join('')}</div>`).join('')}</div>`
+      + (ready ? '<button class="link" id="swap">Đổi bảng</button>' : '')
+    : (ready ? `<div class="hint">Bấm thử nút — nhân vật <b>${T.ROLES[role].name}</b> trên màn hình lớn sẽ nhảy lên ✓</div>` : '')
+      + `<div class="pad ${L.col ? 'col' : ''}" id="pad">${L.b.map(btn).join('')}</div>`
+      + (ready ? `<button class="link" id="swap">Đổi vai</button>${role === CAPTAIN ? ' · <button class="link" id="teamBtn">🏷️ Đặt tên đội</button>' : ''}` : '');
   $('teamBtn')?.addEventListener('click', () => { editingTeam = true; view = ''; render(); });
   $('swap')?.addEventListener('click', () => { picking = true; render(); });
   const pad = $('pad');

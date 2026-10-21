@@ -68,7 +68,7 @@ export default function () {
           ${menu === 'main' ? `
           <div class="menu pop">
             <button class="btn big" data-a="play">🌷 Chơi cả ${theme.rounds.length} vòng <span class="key">Space</span></button>
-            <button class="btn mint" data-a="practice">Luyện từng vòng</button>
+            <div class="row"><button class="btn mint" data-a="practice">Luyện từng vòng</button>${net.online ? '' : '<button class="btn mint" data-a="pvp">⚔️ Đấu PvP</button>'}</div>
             ${net.onlineAvailable ? `<div class="row"><button class="btn mint" data-a="online">🌐 ${net.online ? `Phòng ${esc(net.onlineRoom?.code || '')}` : 'Chơi online'}</button>
             <button class="btn alt" data-a="board">🏆 Xếp hạng</button></div>` : ''}
             ${net.online ? '' : `<button class="btn alt" data-a="phones">📱 Kết nối điện thoại <span class="key">P</span></button>`}
@@ -91,6 +91,7 @@ export default function () {
         if (a === 'team') openTeamDialog();
         if (a === 'themes') openThemePicker();
         if (a === 'online') net.openOnline?.();
+        if (a === 'pvp') location.href = `/pvp.html?theme=${encodeURIComponent(theme.id)}`; // two boards side by side (pvp.html)
         if (a === 'board') window.open(`/leaderboard.html?theme=${encodeURIComponent(theme.id)}`, '_blank', 'noopener');
         if (a === 'back') { menu = 'main'; this.renderMenu(); }
         if (a === 'sound') { A.toggleMute(); this.renderMenu(); }

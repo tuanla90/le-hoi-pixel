@@ -3,6 +3,7 @@ import { C, drawAt } from './gfx.js';
 import { heart, img } from './ui-sprites.js';
 import { initNet, pushState } from './net.js';
 import { theme, loadTheme, storeKey } from './theme.js';
+import { withDet, seedDet } from './detmath.js';
 
 export const W = 480, H = 270;
 const cv = document.getElementById('game');
@@ -15,6 +16,12 @@ export const uiRoot = document.getElementById('ui');
 // server's clock, with everyone's button presses delivered as timestamped events (lockstep). While on, the local
 // keyboard does not touch the simulation directly; online.onKey turns allowed keys into events instead.
 export const online = { on: false, reserve: 0, reserveRight: 0, onKey: null, pump: null };
+
+// ------------------------------------------------------------------ PvP board mode
+// pvp.html shows two boards side by side, each one an <iframe> of this page with ?board=1 (its own copy of the engine:
+// own scene, DOM, sounds and random numbers). A board has no menus and no loop of its own: the PvP page starts a round,
+// feeds it one player's presses and steps it, so both boards — and online, both players' browsers — advance together.
+export const board = { on: new URLSearchParams(location.search).has('board'), diffs: {}, tick: 0 };
 
 // ------------------------------------------------------------------ scaling
 export function resize() {
@@ -43,10 +50,11 @@ addEventListener('keydown', e => {
   if (typing && e.code !== 'Escape') return;
   if (BLOCK.has(e.code)) e.preventDefault();
   if (online.on) { if (!e.repeat) online.onKey?.(e.code, true); return; }
+  if (board.on) { if (!e.repeat) parent.__pvpKey?.(e.code, true); return; } // a click focused this board: hand the key to the PvP page
   if (!e.repeat) { hits.add(e.code); hitAt[e.code] = e.timeStamp || performance.now(); }
   down.add(e.code);
 });
-addEventListener('keyup', e => { if (online.on) online.onKey?.(e.code, false); else down.delete(e.code); });
+addEventListener('keyup', e => { if (online.on) online.onKey?.(e.code, false); else if (board.on) parent.__pvpKey?.(e.code, false); else down.delete(e.code); });
 addEventListener('blur', () => { if (online.on) online.onKey?.(null, false); else down.clear(); });
 addEventListener('pointerdown', () => A.unlock());
 // demos drive the game through a virtual keyboard: while set, scenes read it instead of the real keys
@@ -97,10 +105,12 @@ export const isEasy = () => game.diff === 'easy';
 export const tune = (e, n, h) => (game.diff === 'hard' ? h : game.diff === 'normal' ? n : e);
 // online, the choice belongs to the room's simulation (identical on every browser), not to this browser's storage
 export function diffOf(id) {
+  if (board.on) return board.diffs[id] || 'normal';
   if (online.on) return (game.roomDiffs || {})[id] || 'normal';
   try { const d = localStorage.getItem(storeKey('diff_' + id)); return DIFFS.includes(d) ? d : 'normal'; } catch (e) { return 'normal'; }
 }
 export function setDiffOf(id, d) {
+  if (board.on) { board.diffs[id] = d; return; }
   if (online.on) { (game.roomDiffs ||= {})[id] = d; return; }
   try { localStorage.setItem(storeKey('diff_' + id), d); } catch (e) { /* ignore */ }
 }
@@ -119,7 +129,7 @@ const teamListeners = new Set();
 export const onTeam = fn => { teamListeners.add(fn); return () => teamListeners.delete(fn); };
 export function setTeam(name) {
   const n = String(name || '').replace(/[<>&"]/g, '').replace(/\s+/g, ' ').trim().replace(/^đội\s+/i, '').slice(0, TEAM_MAX); // "Đội X" is shown as "Đội X", not "Đội Đội X"
-  game.team = n; if (!online.on) try { localStorage.setItem(storeKey('team'), n); } catch (e) { /* ignore */ }
+  game.team = n; if (!online.on && !board.on) try { localStorage.setItem(storeKey('team'), n); } catch (e) { /* ignore */ }
   pushState(true); teamListeners.forEach(fn => fn());
   return n;
 }
@@ -216,6 +226,7 @@ export async function boot() {
   game.team = loadTeam();
   const mods = await theme.scenes();
   mods.forEach(m => m.default && m.default());
+  if (board.on) { initBoard(); return; }
   const q = q0.get('scene');
   start(q && scenes[q] ? q : 'title', {});
   requestAnimationFrame(frame);
@@ -226,5 +237,46 @@ export async function boot() {
     setTeam,
     toast: text => game.scene?.toast?.(text),
   });
+}
+// the API the PvP page drives a board with (window.board); see pvp.html / core/pvp.js
+function initBoard() {
+  document.body.classList.add('pvp-board');
+  const step = () => { withDet(() => simStep(1 / 60, board.tick * 1000 / 60)); board.tick++; };
+  window.board = {
+    // the round's intro card (its roles and keys; pressing a key makes that role hop), ready to start
+    show(roundId, diff, seed) {
+      board.diffs[roundId] = diff; board.tick = 0; seedDet(seed);
+      withDet(() => resetSim(roundId));
+    },
+    // start a round from its 3·2·1: same seed on both boards = the same garden, map and customers for both players
+    start(roundId, diff, seed) {
+      board.diffs[roundId] = diff; board.tick = 0; seedDet(seed);
+      withDet(() => { resetSim(roundId); game.scene?.beginCount?.(); });
+    },
+    stop() { withDet(() => { game.scene?.exit?.(); game.scene = null; game.sceneName = ''; uiRoot.innerHTML = ''; }); game.time = 0; board.tick = 0; A.engine(-1); A.stopMusic(); },
+    step(n = 1) { for (let i = 0; i < n; i++) step(); },
+    render,
+    // one press or release of this board's player; hitTick = the tick they actually pressed at (timing-judged rounds)
+    key(code, isDown, hitTick = board.tick) { applyKey('p', code, isDown, hitTick * 1000 / 60); },
+    release() { releaseKeys('p'); },
+    // the keys this round reads, for every role (one player controls all three)
+    codes() { const sc = game.scene, c = sc?.roleCodes || (sc?.demoKeys || []).map(ks => ks.map(k => k[0])); return [...new Set(c.flat())]; },
+    status() {
+      const sc = game.scene; if (!sc) return { state: 'idle' };
+      return { scene: game.sceneName, state: sc.state, t: sc.t || 0, score: sc.result ? sc.result.score : null, raw: sc.result ? sc.result.raw : null };
+    },
+    quiet(q) { A.setQuiet(q); if (q) { A.stopMusic(); A.engine(-1); } },
+    unlock() { A.unlock(); }, // a key or tap on the PvP page counts as the user gesture that lets this board play sound
+    resize, // the PvP page shows or resizes this board's frame
+    hash() {
+      let h = 2166136261 >>> 0;
+      const mix = v => { const s = typeof v === 'number' ? v.toFixed(5) : String(v); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } };
+      const sc = game.scene || {}; mix(game.sceneName); mix(game.time);
+      for (const k of Object.keys(sc).sort()) { const v = sc[k]; if (typeof v === 'number' || typeof v === 'boolean' || (typeof v === 'string' && v.length < 40)) { mix(k); mix(v); } else if (Array.isArray(v)) { mix(k); mix(v.length); } }
+      return h.toString(36);
+    },
+    get tick() { return board.tick; },
+  };
+  parent.__pvpBoardReady?.(window);
 }
 boot();

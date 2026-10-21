@@ -57,7 +57,7 @@ function handle(m) {
       // a role is free if nobody holds it or its holder's phone has dropped off (so a new phone can take over)
       const holder = net.roles[want], free = !holder || holder === p || !net.players.get(holder)?.on;
       if (want === -1 && cur >= 0) net.roles[cur] = null;
-      else if (want >= 0 && want <= 2 && free) { if (cur >= 0) net.roles[cur] = null; net.roles[want] = p; }
+      else if (want >= 0 && want <= (ph.pvp ? 1 : 2) && free) { if (cur >= 0) net.roles[cur] = null; net.roles[want] = p; } // PvP: only Người chơi 1 / 2
     }
   }
   if (m.t === 'restore' && net.roles.every(r => !r)) net.roles = m.roles.map(r => r || null).slice(0, 3);
@@ -71,7 +71,7 @@ function handle(m) {
 export function pushState(force = false) {
   if (!net.ok) return;
   const ph = hooks.phase();
-  const msg = { t: 'state', theme: theme.id, scene: ph.scene, state: ph.state, team: ph.team || '', roles: net.roles.map(pid => pid ? { pid, name: playerName(pid), on: !!net.players.get(pid)?.on } : null) };
+  const msg = { t: 'state', theme: theme.id, pvp: !!ph.pvp, scene: ph.scene, state: ph.state, team: ph.team || '', roles: net.roles.map(pid => pid ? { pid, name: playerName(pid), on: !!net.players.get(pid)?.on } : null) };
   const k = JSON.stringify(msg);
   if (!force && k === lastState) return;
   lastState = k; send(msg);

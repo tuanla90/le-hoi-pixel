@@ -15,7 +15,7 @@ const TICK_MS = 1000 / 60;
 const BUFFER = 3;           // play this many ticks behind the server so jitter does not stall the picture
 const HASH_EVERY = 120;     // compare game state with the others every 2 s
 const MENU_KEYS = ['Space', 'Enter', 'NumpadEnter', 'Escape', 'KeyH', 'KeyV']; // only the room host drives menus and cards
-const LOCAL_ACTS = new Set(['phones', 'team', 'sound', 'online', 'board']);   // buttons that only open something on this device
+const LOCAL_ACTS = new Set(['phones', 'team', 'sound', 'online', 'board', 'pvp']);   // buttons that only open something on this device
 const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } } };
 
 const S = {
@@ -86,6 +86,8 @@ function handle(m) {
   if (m.t === 'err') { banner(''); toastLocal(m.msg); S.ws?.close(); return; }
   if (m.t === 'kicked') { S.closedByUs = true; banner('Phòng này đã mở ở tab khác'); return; }
   if (m.t === 'welcome') {
+    // a PvP room: open the PvP page, which joins it there
+    if (m.kind === 'pvp') { S.closedByUs = true; S.ws?.close(); location.href = `/pvp.html?theme=${encodeURIComponent(m.theme || theme.id)}&room=${m.code}`; return; }
     // the room plays another festival: reload into that theme, then join again from the link
     if (m.theme && m.theme !== theme.id) {
       S.closedByUs = true; S.ws?.close();
