@@ -2,11 +2,16 @@
   {
     "id": "20-10",
     "name": "Tiệm Hoa 20/10",
-    "rounds": [["garden", "🌱 Trồng cây"], ["carry", "🌿 Bê cây"], ["drive", "🚚 Chở cây"], ["sign", "🎨 Làm biển hiệu"], ["shop", "💐 Ngày khai trương"]]
+    "rounds": [["garden", "🌱 Trồng cây"], ["drive", "🚚 Chở cây"], ["shop", "💐 Ngày khai trương"]]
   },
   {
     "id": "halloween",
     "name": "Đêm Halloween",
     "rounds": [["pumpkin", "🎃 Vườn bí ngô"], ["ghosts", "🔦 Soi đèn đuổi ma"], ["potion", "🧪 Tiệm thuốc phù thủy"]]
+  },
+  {
+    "id": "8-3",
+    "name": "Tiệm Hoa 8/3",
+    "rounds": [["carry", "🌿 Bê chậu lan"], ["sign", "🎨 Vẽ thiệp 8/3"], ["gifts", "🎁 Tháp quà 8/3"]]
   }
 ]

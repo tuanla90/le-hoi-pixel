@@ -1,17 +1,17 @@
-// Round 4 — paint flowers onto the shop sign, in rhythm.
-// The rules are mechanics/rhythm-color.js; this file is the 20/10 skin: the three paints, the shop sign, texts and art.
+// Round 2 — paint flowers onto a giant 8/3 greeting card in the shop window, in rhythm.
+// The rules are mechanics/rhythm-color.js; this file is the 8/3 skin: the three paints, the card, texts and art
+// (flowers and paint pots are the sisters' own, from themes/20-10).
 // Each girl owns one paint (Đào đỏ, Mai vàng, Lan xanh dương); mixed colours need several people pressing together.
 import { register, W, H } from '../../../core/main.js';
 import { C } from '../../../core/gfx.js';
-import * as S from '../sprites.js';
+import * as S from '../../20-10/sprites.js';
 import { RhythmColor, LAYOUT } from '../../../mechanics/rhythm-color.js';
-import { INFO } from '../meta.js';
 
 const { COL_X, HIT_Y, TOP_Y, SX0, SX1, SY0, SY1 } = LAYOUT;
 const P = S.PAINTS;
 const sw = m => `<b style="color:${P[m].d}">${P[m].name}</b>`;
 const TEXT = {
-  desc: 'Cùng <b>vẽ hoa</b> trang trí biển hiệu theo nhạc! Mỗi người giữ một hũ sơn. Hoa rơi tới bảng pha màu thì ai có màu trong bông hoa phải bấm — màu pha thì <b>bấm cùng lúc</b>.',
+  desc: 'Cùng <b>vẽ hoa</b> lên tấm <b>thiệp 8/3 khổng lồ</b> dán ở cửa kính tiệm, theo nhạc! Mỗi người giữ một hũ sơn. Hoa rơi tới bảng pha màu thì ai có màu trong bông hoa phải bấm — màu pha thì <b>bấm cùng lúc</b>.',
   tip: 'Cam = Đỏ+Vàng · Xanh lá = Vàng+Xanh dương · Tím = Đỏ+Xanh dương · Cầu vồng = cả ba. Vòng hoa dài: giữ phím, tới chỗ đổi màu thì chuyền cho bạn.',
   diffInfo: {
     easy: 'nhạc chậm 100 BPM · bấm lệch tới ~0,18 giây vẫn tính · không có nốt nhanh · luôn có chấm gợi ý màu · bấm sai màu chỉ mất combo',
@@ -39,9 +39,9 @@ const TEXT = {
   judge: { perfect: 'Hoàn hảo!', good: 'Tốt!', unsynced: 'Chưa đều tay!', holdDone: 'Vòng hoa trọn vẹn!', holdBroken: 'Đứt vòng hoa!', missingPartner: 'Thiếu người!', miss: 'Trượt rồi!', wrong: 'Sai màu!' },
   comboToast: (n, b) => `Combo ${n}! +${b} điểm 🌸`,
   legend: 'Bảng pha màu', comboTitle: 'Combo cả đội', nextMilestone: n => `khi combo đạt ${n}`, accuracy: p => `Chính xác ${p}%`, painted: n => `Hoa đã vẽ: ${n}`,
-  banner: 'Biển hiệu xong!',
+  banner: 'Thiệp xong rồi!',
   hits: 'Hoa vẽ đúng nhịp (1 điểm/bông)', bonus: 'Thưởng mốc combo', bestCombo: 'Combo cao nhất', holds: 'Vòng hoa giữ trọn', wrongs: 'Bấm sai màu', wrongsNone: '0 — chuẩn!',
-  resultExtra: `<div class="signpreview"><b>${INFO.shopName}</b></div>`,
+  resultExtra: '<div class="signpreview"><b>Mừng 8/3 💐</b></div>',
 };
 
 // ------------------------------------------------ art
@@ -67,7 +67,7 @@ function board(g, sh) {
 
 const SKIN = {
   id: 'sign', paints: P, text: TEXT,
-  boardHtml: `<div class="paint-sign"><b>${INFO.shopName}</b></div>`,
+  boardHtml: '<div class="paint-sign"><b>Mừng 8/3 💐</b></div>',
   art: { background, board, note: (m, size) => S.paintFlower(m, size), bucket: b => S.paintBucket[b] },
 };
 

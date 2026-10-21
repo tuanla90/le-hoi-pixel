@@ -1,10 +1,10 @@
-// Round 2 — carry the big potted plant from the greenhouse to the delivery truck.
-// The rules are mechanics/carry-balance.js; this file is the 20/10 skin: the garden course, texts and art.
-// Đào leads up/down, Mai left/right, Lan keeps the pot balanced.
+// Round 1 — a customer ordered a big pot of orchids for 8/3: carry it from the greenhouse to the delivery truck.
+// The rules are mechanics/carry-balance.js; this file is the 8/3 skin: the garden course and texts. The art is the
+// sisters' own, from themes/20-10. Đào leads up/down, Mai left/right, Lan keeps the pot balanced.
 import { register } from '../../../core/main.js';
 import { C, drawAt } from '../../../core/gfx.js';
-import * as S from '../sprites.js';
-import { grassField } from '../world.js';
+import * as S from '../../20-10/sprites.js';
+import { grassField } from '../../20-10/world.js';
 import { CarryBalance, LAYOUT, segDist } from '../../../mechanics/carry-balance.js';
 
 const { T } = LAYOUT;
@@ -60,7 +60,7 @@ const LEVEL = {
 };
 
 const TEXT = {
-  desc: 'Ba chị em cùng bê chậu cây to lên xe giao hàng. Đào dẫn lên/xuống, Mai dẫn trái/phải, Lan <b>giữ chậu thăng bằng</b>. Va hàng rào, bị cún xô, dính vòi tưới, giẫm vũng nước… đều làm chậu nghiêng — nghiêng quá là <b>đổ chậu</b>!',
+  desc: 'Mùa 8/3, khách đặt một <b>chậu lan thật to</b> làm quà! Ba chị em cùng bê chậu từ nhà kính lên xe giao hàng. Đào dẫn lên/xuống, Mai dẫn trái/phải, Lan <b>giữ chậu thăng bằng</b>. Va hàng rào, bị cún xô, dính vòi tưới, giẫm vũng nước… đều làm chậu nghiêng — nghiêng quá là <b>đổ chậu</b>!',
   tip: 'Nhặt <b>hoa</b> dọc đường để cắm thêm vào chậu, về sớm hơn mốc còn được thưởng theo giây. Đường ngoằn ngoèo lên xuống nên <b>Đào và Mai</b> thay nhau dẫn. Giữ chấm trắng trên thước thăng bằng ở giữa. Mỗi lần đổ chậu mất khoảng 1 giây hốt đất và bị trừ điểm. Cún chạy chậm hơn nhóm, cứ đi tiếp là thoát.',
   diffInfo: (e, num, d) => `${{ easy: 'chậu nghiêng chậm, gió nhẹ, cún chạy chậm', normal: 'chậu nghiêng vừa', hard: 'chậu nghiêng nhanh, gió mạnh, cún chạy nhanh' }[d]} · cầu treo ${e.bridge} ô, khe đá ${e.stones} ô · đổ chậu −${e.drop} điểm · về trong ${e.par} giây là 100 điểm · mỗi bông hoa +${num(e.flower)}, mỗi giây sớm hơn +${e.fast}`,
   scoreLabel: 'Chậu',

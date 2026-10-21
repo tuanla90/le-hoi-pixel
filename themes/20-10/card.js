@@ -1,4 +1,4 @@
-// The personal 20/10 card, drawn on a canvas so it can be saved as a picture (phones in LAN play, every player online).
+// The personal card of the flower-shop themes (20/10, 8/3), drawn on a canvas so it can be saved as a picture (phones in LAN play, every player online).
 export function drawCard(c) {
   const W = 720, H = 1080, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d'), F = '"Baloo 2", "Trebuchet MS", "Segoe UI", system-ui, sans-serif';
@@ -11,7 +11,7 @@ export function drawCard(c) {
   g.globalAlpha = 1; g.strokeStyle = '#d9628f'; g.lineWidth = 8; g.strokeRect(24, 24, W - 48, H - 48); g.strokeStyle = '#ffd23f'; g.lineWidth = 3; g.strokeRect(40, 40, W - 80, H - 80);
   g.textAlign = 'center'; g.fillStyle = '#3b2a3a';
   const text = (t, y, size, color = '#3b2a3a', weight = 800) => { g.font = `${weight} ${size}px ${F}`; g.fillStyle = color; g.fillText(t, W / 2, y); };
-  text('20 / 10', 175, 128, '#d9628f');
+  text(c.headline || '20 / 10', 175, 128, '#d9628f'); // the big date on top (cards sent before themes had one say 20 / 10)
   text('Thiệp tặng', 245, 34, '#6b4a5a', 700);
   text(c.name, 320, 72, '#3b2a3a');
   if (c.team) text(`🏷️ Đội ${c.team}`, 358, 28, '#9a5b3c', 700);

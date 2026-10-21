@@ -6,9 +6,8 @@ import { starsHTML, starsFor } from '../../../core/round.js';
 import { theme, storeKey } from '../../../core/theme.js';
 import { openLobby, openTeamDialog, openThemePicker, esc } from '../../../core/lobby.js';
 import { net } from '../../../core/net.js';
-import { INFO } from '../meta.js';
 
-const SHOP_NAME = INFO.shopName;
+// the flower-shop title screen; Tiệm Hoa 20/10 and Tiệm Hoa 8/3 share it, each with its own theme.look (logo, subtitle)
 
 // background shared with the finale
 export function skyScene(seed = 4) {
@@ -62,9 +61,9 @@ export default function () {
         let best = 0; try { best = +localStorage.getItem(storeKey('best_final')) || 0; } catch (e) { /* ignore */ }
         const root = el(`<div class="title-ui"></div>`); uiRoot.appendChild(root);
         root.innerHTML = `
-          <div class="shop-sign" style="left:calc(var(--u)*260);top:calc(var(--u)*108);width:calc(var(--u)*140);height:calc(var(--u)*19);font-size:calc(var(--u)*10)">${SHOP_NAME}</div>
-          <div class="logo pop"><span class="l1">Tiệm Hoa</span><span class="l2">20<i>/</i>10</span>
-            <div class="sub">Ba chị em · Một cửa hàng · Năm thử thách</div>${game.team ? `<div class="team-tag">🏷️ Đội ${esc(game.team)}</div>` : ''}</div>
+          <div class="shop-sign" style="left:calc(var(--u)*260);top:calc(var(--u)*108);width:calc(var(--u)*140);height:calc(var(--u)*19);font-size:calc(var(--u)*10)">${theme.shopName}</div>
+          <div class="logo pop"><span class="l1">${theme.look.logo[0]}</span><span class="l2">${theme.look.logo[1]}</span>
+            <div class="sub">${theme.look.sub}</div>${game.team ? `<div class="team-tag">🏷️ Đội ${esc(game.team)}</div>` : ''}</div>
           ${menu === 'main' ? `
           <div class="menu pop">
             <button class="btn big" data-a="play">🌷 Chơi cả ${theme.rounds.length} vòng <span class="key">Space</span></button>
@@ -75,7 +74,7 @@ export default function () {
             <div class="row"><button class="btn alt" data-a="team">🏷️ ${game.team ? 'Đổi tên đội' : 'Đặt tên đội'} <span class="key">N</span></button>
             ${net.online ? '' : '<button class="btn alt" data-a="themes">🎭 Chủ đề khác</button>'}</div>
             <button class="btn alt" data-a="sound">${A.isMuted() ? '🔇 Âm thanh: Tắt' : '🔊 Âm thanh: Bật'} <span class="key">M</span></button>
-            <div class="hint">Chơi một mình — bạn điều khiển cả <b>Đào</b>, <b>Mai</b> và <b>Lan</b>.<br>Chọn độ khó ở đầu mỗi vòng: 🌼 Dễ ×${DIFF_MULT.easy.toFixed(1)} · 🌷 Thường ×${DIFF_MULT.normal.toFixed(1)} · 🔥 Thử thách ×${DIFF_MULT.hard.toFixed(1)}${matchMedia('(pointer: coarse)').matches ? '<br><b style="color:#d9628f">⌨️ Game cần bàn phím — hãy mở trên máy tính nhé!</b>' : ''}${best ? `<br>Kỷ lục tổng: <b>${best}</b> điểm` : ''}</div>
+            <div class="hint">Chơi một mình — bạn điều khiển cả ${theme.roles.map(R => `<b>${R.name}</b>`).join(', ').replace(/, ([^,]*)$/, ' và $1')}.<br>Chọn độ khó ở đầu mỗi vòng: 🌼 Dễ ×${DIFF_MULT.easy.toFixed(1)} · 🌷 Thường ×${DIFF_MULT.normal.toFixed(1)} · 🔥 Thử thách ×${DIFF_MULT.hard.toFixed(1)}${matchMedia('(pointer: coarse)').matches ? '<br><b style="color:#d9628f">⌨️ Game cần bàn phím — hãy mở trên máy tính nhé!</b>' : ''}${best ? `<br>Kỷ lục tổng: <b>${best}</b> điểm` : ''}</div>
           </div>` : `
           <div class="menu practice pop">
             ${theme.rounds.map(r => { let b = 0; try { b = Math.max(...['easy', 'normal', 'hard'].map(d => +localStorage.getItem(bestKey(r.id, d)) || 0)); } catch (e) { /* ignore */ } return `<button class="btn alt round-btn" data-a="r:${r.id}"><span>${r.icon} Vòng ${r.num}: ${r.title}</span>${starsHTML(starsFor(b))}</button>`; }).join('')}
@@ -85,7 +84,7 @@ export default function () {
       },
       act(a) {
         A.unlock(); A.sfx.click();
-        if (a === 'play') { game.campaign = { scores: {}, words: null }; go('garden'); }
+        if (a === 'play') { game.campaign = { scores: {} }; go(theme.rounds[0].id); }
         if (a === 'practice') { menu = 'practice'; this.renderMenu(); }
         if (a === 'phones') openLobby();
         if (a === 'team') openTeamDialog();

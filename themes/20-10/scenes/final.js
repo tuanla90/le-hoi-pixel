@@ -7,48 +7,33 @@ import { theme, storeKey } from '../../../core/theme.js';
 import { skyScene } from './title.js';
 import { net, onNet, sendTo } from '../../../core/net.js';
 import { esc } from '../../../core/lobby.js';
-import { INFO } from '../meta.js';
 
-const SHOP_NAME = INFO.shopName;
-
-// personal 20/10 cards: each phone gets its own, titled after the sister its player was most often
-const TITLES = ['Bông Đào rạng rỡ', 'Nàng Mai khéo tay', 'Đoá Lan tinh tế'];
-const WISHES = [
-  'Chúc bạn luôn xinh đẹp, rạng rỡ như những bông hoa trong tiệm!',
-  'Chúc bạn một mùa 20/10 thật nhiều niềm vui, nhiều yêu thương và nhiều hoa!',
-  'Cảm ơn bạn đã cùng ba chị em mở tiệm — chúc bạn luôn tươi tắn và hạnh phúc!',
-  'Chúc bạn mỗi ngày đều nở hoa: công việc thuận lợi, nụ cười luôn trên môi!',
-  'Chúc bạn luôn tự tin, toả sáng và được yêu thương thật nhiều!',
-];
+// the flower-shop finale, shared by Tiệm Hoa 20/10 and Tiệm Hoa 8/3: theme.look.finale holds each one's card titles
+// (one per sister: the one its player was most often), wishes, date, card headline, ranks and banner
 // cards for every named phone: rounds played (which sister, how many stars), the team's total and rank, a wish
 function makeCards(camp, rows, total, rank) {
-  const cast = camp.cast || {}, out = [];
+  const F = theme.look.finale, cast = camp.cast || {}, out = [];
   net.players.forEach((pl, pid) => {
     if (!pl.name) return;
     const played = rows.map(x => ({ title: x.r.title, stars: starsFor(x.sc), girl: (cast[x.r.id] || []).indexOf(pid) })).filter(x => x.girl >= 0);
     const count = [0, 1, 2].map(i => played.filter(x => x.girl === i).length), most = count.indexOf(Math.max(...count));
     out.push([pid, {
-      t: 'card', name: pl.name, girl: played.length ? most : -1, title: played.length ? TITLES[most] : 'Cổ động viên số 1',
-      rounds: played, total, rank: rank[1], rankIcon: rank[2], shop: SHOP_NAME, team: game.team || '',
-      wish: WISHES[(pl.name.length + total) % WISHES.length], date: `20/10/${new Date().getFullYear()}`,
+      t: 'card', name: pl.name, girl: played.length ? most : -1, title: played.length ? F.titles[most] : 'Cổ động viên số 1',
+      rounds: played, total, rank: rank[1], rankIcon: rank[2], shop: theme.shopName, team: game.team || '', headline: F.headline,
+      wish: F.wishes[(pl.name.length + total) % F.wishes.length], date: `${F.date}/${new Date().getFullYear()}`,
     }]);
   });
   return out;
 }
 
-const RANKS = [
-  // compared against the weighted total of all 5 rounds (each counted after softCap): measured with bots on Thường, a
-  // first-time team lands near 450–480, an average one near 550, a strong one near 600; ≥625 needs Thử thách played well
-  [625, 'Tiệm hoa Thần thoại', '✨'], [550, 'Tiệm hoa Huyền thoại', '👑'], [460, 'Tiệm hoa Nổi tiếng', '🌷'], [360, 'Tiệm hoa Dễ thương', '🌼'], [0, 'Tiệm hoa Mới mở', '🌱'],
-];
 
 export default function () {
   register('final', () => {
-    const camp = game.campaign || { scores: { garden: 72, carry: 85, drive: 64, sign: 58 } };
+    const F = theme.look.finale, camp = game.campaign || { scores: Object.fromEntries(theme.rounds.map((r, i) => [r.id, [92, 78, 64][i % 3]])) };
     // every round counts with the multiplier of the difficulty it was played at
     const rows = theme.rounds.map(r => { const sc = camp.scores[r.id] || 0, d = (camp.diffs || {})[r.id] || 'normal'; return { r, sc, d, pts: Math.round(sc * DIFF_MULT[d]) }; });
     const raw = rows.reduce((s, x) => s + x.sc, 0), total = rows.reduce((s, x) => s + x.pts, 0);
-    const rank = RANKS.find(r => total >= r[0]);
+    const rank = F.ranks.find(r => total >= r[0]);
     let bg, parts = new Particles(), t = 0, petalT = 0, confT = 0;
     const SHOP_X = 168, SHOP_Y = 238;
     return {
@@ -65,7 +50,7 @@ export default function () {
         };
         sendCards(); this.offNet = onNet(sendCards);
         // online: every player sees this screen on their own device and opens their card here; the host posts the score
-        const cardNote = net.online ? '<div class="btns"><button class="btn mint" data-local="card">💌 Xem thiệp 20/10 của bạn</button></div>' : net.ok && [...net.players.values()].some(p => p.name) ? '<div class="best">💌 Thiệp 20/10 đã gửi về điện thoại của từng bạn — mở điện thoại để lưu ảnh nhé!</div>' : '';
+        const cardNote = net.online ? `<div class="btns"><button class="btn mint" data-local="card">💌 Xem ${theme.cardName.toLowerCase()} của bạn</button></div>` : net.ok && [...net.players.values()].some(p => p.name) ? `<div class="best">💌 ${theme.cardName} đã gửi về điện thoại của từng bạn — mở điện thoại để lưu ảnh nhé!</div>` : '';
         const shop = S.shopFacade();
         bg = makeCanvas(W, H, g => {
           g.drawImage(skyScene(8), 0, 0);
@@ -76,8 +61,8 @@ export default function () {
         const root = el(`<div class="final-ui"></div>`); uiRoot.appendChild(root);
         root.innerHTML = `
           <div class="shop-sign final-sign" style="left:calc(var(--u)*${SHOP_X - 70});top:calc(var(--u)*${SHOP_Y - 168 + 44});width:calc(var(--u)*140);height:calc(var(--u)*20)">
-            <b>${SHOP_NAME}</b></div>
-          <div class="opening pop">🎉 Khai trương! 🎉</div>
+            <b>${theme.shopName}</b></div>
+          <div class="opening pop">${F.opening}</div>
           <div class="card board-card pop">
             <div class="ribbon">Bảng tổng kết${teamTag() ? ` · ${esc(teamTag())}` : ''}</div>
             <ul class="lines tot">${rows.map(x => `<li><span>${x.r.icon} ${x.r.title}</span><span>${starsHTML(starsFor(x.sc))} <em>${x.sc}×${DIFF_MULT[x.d].toFixed(1)}</em> <b>${x.pts}</b></span></li>`).join('')}</ul>
@@ -96,7 +81,7 @@ export default function () {
         net.onFinal?.({ scores: camp.scores, diffs: camp.diffs || {}, total, rankName: rank[1], team: game.team });
       },
       act(a) {
-        if (a === 'again') { game.campaign = { scores: {}, words: null }; go('garden'); }
+        if (a === 'again') { game.campaign = { scores: {} }; go(theme.rounds[0].id); }
         if (a === 'menu') { game.campaign = null; go('title'); }
       },
       update(dt) {

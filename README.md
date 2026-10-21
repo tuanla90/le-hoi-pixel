@@ -4,8 +4,9 @@ Bộ mini game pixel chơi theo đội 3 người, mỗi dịp lễ một chủ 
 
 | Chủ đề | Thư mục | Mở | Nội dung |
 |---|---|---|---|
-| 🌸 Tiệm Hoa 20/10 | [themes/20-10](themes/20-10/README.md) | `/?theme=20-10` | Ba chị em Đào · Mai · Lan mở tiệm hoa qua 5 vòng |
+| 🌸 Tiệm Hoa 20/10 | [themes/20-10](themes/20-10/README.md) | `/?theme=20-10` | Ba chị em Đào · Mai · Lan mở tiệm hoa qua 3 vòng: trồng cây, chở cây, ngày khai trương |
 | 🎃 Đêm Halloween | [themes/halloween](themes/halloween/README.md) | `/?theme=halloween` | Ba bạn nhỏ hoá trang Bí · Dơi · Mèo qua 3 vòng: vườn bí ngô, soi đèn đuổi ma, tiệm thuốc phù thủy |
+| 💐 Tiệm Hoa 8/3 | [themes/8-3](themes/8-3/README.md) | `/?theme=8-3` | Ba chị em lo mùa quà 8/3 qua 3 vòng: bê chậu lan, vẽ thiệp 8/3, tháp quà 8/3 (thể loại xếp chồng mới) |
 
 Không ghi `?theme=` thì game mở chủ đề đầu tiên trong [themes/themes.json](themes/themes.json). Ở màn hình chính, nút **🎭 Chủ đề khác** mở danh sách chủ đề (không có khi đang trong phòng online, vì cả phòng phải chơi cùng một chủ đề).
 
@@ -50,7 +51,7 @@ Khi game chạy bằng `server.js` (trên laptop, Railway hoặc Render), màn h
 - Mỗi 2 giây các máy gửi dấu vân tay trạng thái lên máy chủ; nếu lệch, máy đó hiện thông báo để chạm vào và đồng bộ lại.
 - Khi phòng đứng yên ở màn hình chính quá 20 giây, máy chủ bắt đầu lại đồng hồ để người vào sau không phải tua lâu.
 
-Đã thử với 2 tab Chrome cùng phòng: tất cả 5 vòng, cả lúc vào lại giữa trận, có 95 điểm so trạng thái và không lệch điểm nào.
+Đã thử với 2 tab Chrome cùng phòng (khi 20/10 còn 5 vòng): tất cả 5 vòng, cả lúc vào lại giữa trận, có 95 điểm so trạng thái và không lệch điểm nào.
 
 **Giới hạn hiện tại**
 - Chưa thử trên Safari/iPhone thật.
@@ -93,7 +94,7 @@ Màn hình chính có nút **⚔️ Đấu PvP** (`/pvp.html?theme=20-10`). Hai 
 
 Cách làm: mỗi bảng là một `<iframe>` của game ở chế độ bảng (`index.html?board=1`), tức là một bản engine riêng không có menu và không tự chạy. Trang `pvp.html` (`core/pvp.js`) giữ trận đấu và cho cả hai bảng chạy cùng nhịp, 60 lần mỗi giây. Online dùng đúng cách đồng bộ lockstep của phòng chơi chung (phòng loại `pvp` trên máy chủ). Mã người chơi gắn với từng tab, nên hai tab của cùng một trình duyệt cũng đấu với nhau được.
 
-Đã thử: một máy đủ 5 vòng 20/10; tay cầm điện thoại điều khiển bảng phải; online 2 tab, Halloween đủ 3 vòng, có lúc tải lại trang giữa vòng, không lệch trạng thái lần nào; nút cảm ứng trên khung điện thoại; cùng thao tác trên hai bảng cho ra trạng thái giống hệt nhau.
+Đã thử (khi 20/10 còn 5 vòng): một máy đủ 5 vòng 20/10; tay cầm điện thoại điều khiển bảng phải; online 2 tab, Halloween đủ 3 vòng, có lúc tải lại trang giữa vòng, không lệch trạng thái lần nào; nút cảm ứng trên khung điện thoại; cùng thao tác trên hai bảng cho ra trạng thái giống hệt nhau.
 
 ## Cấu trúc
 
@@ -117,11 +118,12 @@ core/                      lõi dùng chung, không nhắc tới dịp lễ nào
   audio.js, detmath.js     âm thanh WebAudio; toán và ngẫu nhiên tất định cho lockstep
 mechanics/                 khuôn luật chơi dùng lại được, chủ đề chỉ đưa vào tên, chữ và hình
   grid-care.js             lưới 4×4: hai người đưa khung, một người dùng đúng dụng cụ (20/10 vòng 1, Halloween vòng 1)
-  carry-balance.js         cả nhóm bê một thứ chao đảo qua màn có chướng ngại, một người giữ thăng bằng (20/10 vòng 2)
-  auto-drive.js            xe tự chạy trên đường cong: hai người lái, một người phanh ở đèn đỏ và chỗ giao hàng (20/10 vòng 3)
-  rhythm-color.js          nhịp điệu 3 màu, màu pha cần bấm cùng lúc, nốt dài chuyền tay (20/10 vòng 4)
+  carry-balance.js         cả nhóm bê một thứ chao đảo qua màn có chướng ngại, một người giữ thăng bằng (8/3 vòng 1)
+  auto-drive.js            xe tự chạy trên đường cong: hai người lái, một người phanh ở đèn đỏ và chỗ giao hàng (20/10 vòng 2)
+  rhythm-color.js          nhịp điệu 3 màu, màu pha cần bấm cùng lúc, nốt dài chuyền tay (8/3 vòng 2)
   beam-guard.js            ba đèn pin xoay đuổi thứ bò tới từ bóng tối, ma to cần nhiều đèn (Halloween vòng 2)
-  assembly-line.js         dây chuyền 3 khâu phục vụ khách (20/10 vòng 5, Halloween vòng 3)
+  assembly-line.js         dây chuyền 3 khâu phục vụ khách (20/10 vòng 3, Halloween vòng 3)
+  stack-tower.js           xếp tháp: một người đẩy móc cẩu, một người thả, một người giữ tháp khỏi đổ (8/3 vòng 3)
 themes/
   themes.json              danh mục chủ đề và id các vòng (máy chủ và bảng xếp hạng đọc file này)
   20-10/
@@ -129,8 +131,9 @@ themes/
     meta.js                phần nhẹ, điện thoại cũng tải: tên, 3 vai, nút bấm từng vòng
     card.js                vẽ thiệp cá nhân cuối ván
     sprites.js, world.js   pixel art vẽ bằng code
-    scenes/                màn chính, 5 vòng chơi (mỗi vòng là bộ áo của một khuôn), màn tổng kết
+    scenes/                màn chính, 3 vòng chơi (mỗi vòng là bộ áo của một khuôn), màn tổng kết
   halloween/               cùng cấu trúc: 3 vòng, đều là bộ áo của khuôn trong mechanics/
+  8-3/                     3 vòng riêng; mượn nhân vật, hình vẽ, màn chính, màn tổng kết và thiệp của 20-10/
     sprites.html           xem toàn bộ sprite khi chỉnh đồ hoạ
     thiep-moi.html         thiệp mời sự kiện
 ```

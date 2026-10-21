@@ -181,9 +181,11 @@ function mainDiff(diffs, ids) {
 }
 const WEEK = 7 * 24 * 3600 * 1000;
 const entryTheme = e => e.theme || LEGACY_THEME;
+// a total only compares with totals over the same rounds (20/10 had five rounds before 8/3 took two of them)
+const sameRounds = (e, ids) => Object.keys(e.scores).length === ids.length && ids.every(id => e.scores[id] != null);
 function filtered(q) {
-  const diff = DIFFS.includes(q.get('diff')) ? q.get('diff') : 'all', since = q.get('period') === 'week' ? Date.now() - WEEK : 0, theme = themeOf(q.get('theme')).id;
-  return board.filter(e => entryTheme(e) === theme && e.at >= since && (diff === 'all' || e.mainDiff === diff));
+  const diff = DIFFS.includes(q.get('diff')) ? q.get('diff') : 'all', since = q.get('period') === 'week' ? Date.now() - WEEK : 0, theme = themeOf(q.get('theme')).id, ids = roundIds(theme);
+  return board.filter(e => entryTheme(e) === theme && sameRounds(e, ids) && e.at >= since && (diff === 'all' || e.mainDiff === diff));
 }
 // best entry per team (case-insensitive), highest first
 function bestPerTeam(list, score) {
