@@ -86,7 +86,7 @@ Trên Railway, Render (hoặc khi đặt `PUBLIC=1`), chế độ tay cầm cùn
 
 Màn hình chính có nút **⚔️ Đấu PvP** (`/pvp.html?theme=20-10`). Hai người chơi **cùng một vòng** trên hai bảng đặt cạnh nhau, **mỗi người tự điều khiển cả 3 vai**. Hai bảng dùng chung hạt giống ngẫu nhiên: cùng khu vườn, cùng bản đồ, cùng khách. Ai nhiều điểm hơn thì thắng vòng.
 
-- **Thể thức**: *Cả N vòng* (đi hết các vòng của chủ đề) hoặc *Một vòng* (chọn một vòng). Độ khó chọn chung cho cả trận. Thắng trận là người thắng nhiều vòng hơn; nếu hoà số vòng thì so tổng điểm.
+- **Thể thức**: *Cả N vòng* (đi hết các vòng của chủ đề) hoặc *Một vòng* (chọn một vòng). Độ khó chọn chung cho cả trận. Thắng trận là người có **tổng điểm** cao hơn; nếu hoà tổng điểm thì xét số vòng thắng.
 - **Mỗi vòng**: thẻ giới thiệu hiện trên cả hai bảng. Bấm thử phím thì nhân vật trên bảng của mình nhảy lên. Bấm **Bắt đầu** (`Space`), hết giờ thì so điểm rồi **Vòng tiếp theo**. Cuối trận có bảng điểm từng vòng và nút **Đấu lại**.
 - **Trên một máy** (chạy bằng `Choi-game.bat` / `server.js`): bàn phím chỉ đủ cho một người, mặc định là Người chơi 1; đổi sang Người chơi 2 ở thanh dưới. Người còn lại quét **mã QR**, mở tay cầm điện thoại và chọn **Người chơi 1 / 2**. Tay cầm hiện nút của cả 3 vai. Hai người cùng dùng điện thoại cũng được. Chỉ bảng trái phát tiếng, để âm thanh không bị chồng.
 - **Online** (Railway, Render hoặc laptop): bấm **🌐 Đấu online → ✨ Tạo phòng đấu**, rồi gửi mã phòng hoặc link `…/pvp.html?room=ABCD`. Hai người vào đầu tiên là Người chơi 1 và 2, người vào sau được xem. Chủ phòng 👑 chọn luật và bấm các nút. Mỗi người thấy cả hai bảng; trên điện thoại cầm dọc, bảng của mình to ở trên, bảng đối thủ nhỏ hơn bên dưới, nút cảm ứng của cả 3 vai ở cuối màn hình.

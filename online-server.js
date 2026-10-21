@@ -12,7 +12,8 @@ const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const { wsAccept, wsSend, wsReader } = require('./ws-lite.js');
 
 const TICK_MS = 1000 / 60;
-const FRAME_MS = 33;
+const FRAME_MS = 33;     // a frame goes out at least this often…
+const EVENT_MS = 16;     // …and sooner when someone pressed a button (less input delay)
 const ROLES = 3;
 // the festivals and their rounds (the same catalogue the browser reads); a theme's leaderboard needs all its rounds
 const THEMES = require('./themes/themes.json');
@@ -125,6 +126,8 @@ setInterval(() => {
   const now = Date.now();
   for (const room of rooms.values()) {
     const u = tickOf(room);
+    if (!room.pending.length && now - (room.sentAt || 0) < FRAME_MS - 2) continue;
+    room.sentAt = now;
     const msg = JSON.stringify({ t: 'f', u, ev: room.pending }); room.pending = [];
     room.players.forEach(p => p.sock && wsSend(p.sock, msg));
     if (room.hostGoneAt && now - room.hostGoneAt > 15000) {
@@ -135,7 +138,7 @@ setInterval(() => {
     if (room.scene === 'title' && now - room.lastEventAt > 20000 && u > 60 * 60) resetEpoch(room);
     if (room.emptySince && now - room.emptySince > 10 * 60 * 1000) rooms.delete(room.code);
   }
-}, FRAME_MS);
+}, EVENT_MS);
 
 // ------------------------------------------------------------------ leaderboard storage
 // Railway: attach a Volume and the leaderboard file lands on it automatically (RAILWAY_VOLUME_MOUNT_PATH)

@@ -75,8 +75,8 @@ function tick() {
     setPhase('roundEnd');
   }
 }
-// more rounds won; on a tie, more points in total; else a draw (-1)
-const champion = () => (M.wins[0] !== M.wins[1] ? (M.wins[0] > M.wins[1] ? 0 : 1) : M.tot[0] !== M.tot[1] ? (M.tot[0] > M.tot[1] ? 0 : 1) : -1);
+// more points in total over the match; on a tie, more rounds won; else a draw (-1)
+const champion = () => (M.tot[0] !== M.tot[1] ? (M.tot[0] > M.tot[1] ? 0 : 1) : M.wins[0] !== M.wins[1] ? (M.wins[0] > M.wins[1] ? 0 : 1) : -1);
 const matchHash = () => [M.phase, M.t, M.idx, M.wins.join(), M.tot.join(), boards[0].hash(), boards[1].hash()].join('|');
 
 // ------------------------------------------------------------------ who plays where
@@ -209,10 +209,12 @@ function pump(now) {
   const est = S.lastU + (now - S.lastURecv) / TICK_MS;
   const target = Math.min(S.lastU, Math.floor(est) - BUFFER), n = target - S.simTick;
   if (n > 120 && !S.catching) S.catching = true;
-  if (S.catching) { const t0 = performance.now(); while (S.simTick < target && performance.now() - t0 < 40) stepOnce(); } // big silent chunks
+  const t0 = S.simTick;
+  if (S.catching) { const w0 = performance.now(); while (S.simTick < target && performance.now() - w0 < 40) stepOnce(); } // big silent chunks
   else for (let i = 0; i < Math.min(n, 4); i++) stepOnce();
   if (S.catching && target - S.simTick <= 4) { S.catching = false; banner(''); }
   if (isHost() && now - S.sceneSent > 1000) { S.sceneSent = now; send({ t: 'scene', s: M.phase === 'setup' || M.phase === 'final' ? 'title' : 'pvp' }); } // the server freshens an idle room
+  return S.simTick - t0;
 }
 function stepOnce() {
   const t = S.simTick;
@@ -234,15 +236,18 @@ function applyEvent([t, who, e]) {
 }
 
 // ------------------------------------------------------------------ drawing the page
-let lastPanel = '', lastHead = '', lastCtl = '', quiet = [null, null], sizes = [0, 0];
+let lastPanel = '', lastHead = '', lastCtl = '', lastBody = '', lastLabels = '', quiet = [null, null], refit = true;
 function frame(now) { requestAnimationFrame(frame); update(now); }
+// Two whole games on one page: draw only what changed. The boards are drawn only after the match stepped (a 120/144 Hz
+// screen would otherwise redraw both 2–3 times per step), and the page's own DOM is touched only when its text changes.
 function update(now) {
   try {
-    if (mode === 'local') step(now); else pump(now);
+    const n = mode === 'local' ? step(now) : pump(now);
     const show = M.phase !== 'setup' && M.phase !== 'final';
-    if (show) boards.forEach((b, i) => { const w = $('b' + i).clientWidth; if (w !== sizes[i]) { sizes[i] = w; b.resize(); } }); // a frame shown or resized
-    if (show && !S.catching) boards.forEach(b => b.render());
-    document.body.className = M.phase + (lastCtl ? ' touchpad' : '');
+    const body = M.phase + (lastCtl ? ' touchpad' : '');
+    if (body !== lastBody) { lastBody = body; document.body.className = body; refit = true; }
+    if (show && refit) { refit = false; boards.forEach(b => b.resize()); n || boards.forEach(b => b.render()); } // a frame just shown or resized
+    if (show && n && !S.catching) boards.forEach(b => b.render());
     drawLabels(); drawHead(); drawPanel(); drawControls(); syncSound();
     if (mode === 'local') pushState();
   } catch (e) { console.error('[PvP] frame error', e); }
@@ -253,6 +258,7 @@ function step(now) {
   let n = 0;
   while (acc >= TICK_MS && n < 4) { tick(); acc -= TICK_MS; n++; }
   if (n === 4) acc = 0; // a slow machine runs slower rather than in bursts
+  return n;
 }
 // locally the left board makes the sounds (two copies of every sound would clash); online, your own board
 function syncSound() {
@@ -263,14 +269,16 @@ function syncSound() {
   });
 }
 function drawLabels() {
-  const mine = me();
-  [0, 1].forEach(i => {
+  const mine = me(), labels = [0, 1].map(i => {
     const dev = mode === 'local' ? (L.kb === i ? ' ⌨️' : '') + (net.roles[i] ? ' 📱' : '') : '';
-    const txt = `${i ? '🟦' : '🟥'} ${nameOf(i)}${mine === i ? ' (bạn)' : ''}${dev}`;
-    if ($('lbl' + i).textContent !== txt) $('lbl' + i).textContent = txt;
-    $('wait' + i).hidden = !(M.phase === 'play' && M.done[i] && !M.done[1 - i]);
-    $('slot' + i).classList.toggle('mine', mine === i); $('slot' + i).classList.toggle('opp', mine >= 0 && mine !== i);
+    return [`${i ? '🟦' : '🟥'} ${nameOf(i)}${mine === i ? ' (bạn)' : ''}${dev}`, M.phase === 'play' && M.done[i] && !M.done[1 - i], mine === i, mine >= 0 && mine !== i];
   });
+  const sig = JSON.stringify(labels); if (sig === lastLabels) return; lastLabels = sig;
+  labels.forEach(([txt, waiting, mineB, opp], i) => {
+    $('lbl' + i).textContent = txt; $('wait' + i).hidden = !waiting;
+    $('slot' + i).classList.toggle('mine', mineB); $('slot' + i).classList.toggle('opp', opp);
+  });
+  refit = true; // mine/opp change the boards' sizes on phones
 }
 function drawHead() {
   const h = $('head');
@@ -371,7 +379,7 @@ function finalHTML(can) {
   return `<div class="card big-card"><div class="ribbon">🏆 Kết quả trận đấu · ${DIFF[M.diff]}</div>
     <div class="crown">${w >= 0 ? '👑' : '🤝'}</div>
     <h1>${w >= 0 ? `${esc(nm[w])} thắng!` : 'Hoà nhau!'}</h1>
-    <p class="lead">${M.list.length > 1 ? `Thắng <b>${M.wins[0]} – ${M.wins[1]}</b> vòng · ` : ''}Tổng điểm <b>${M.tot[0]} – ${M.tot[1]}</b></p>
+    <p class="lead">Tổng điểm <b>${M.tot[0]} – ${M.tot[1]}</b>${M.list.length > 1 ? ` · thắng <b>${M.wins[0]} – ${M.wins[1]}</b> vòng` : ''}</p>
     <table><thead><tr><th>Vòng</th><th>🟥 ${esc(nm[0])}</th><th>🟦 ${esc(nm[1])}</th></tr></thead><tbody>${rows}</tbody>
       <tfoot><tr><td>Tổng</td><td>${M.tot[0]}</td><td>${M.tot[1]}</td></tr></tfoot></table>
     <div class="btns">${can ? `<button class="btn big" data-a="again" data-primary>⚔️ Đấu lại ${key('Space')}</button><button class="btn alt" data-a="menu">Đổi luật</button>` : '<span class="note">⏳ Chờ chủ phòng 👑…</span>'}
@@ -431,6 +439,7 @@ async function boot() {
     window.__pvpBoardReady = w => { const i = [0, 1].find(j => $('b' + j).contentWindow === w); boards[i] = w.board; if (boards[0] && boards[1]) ok(); };
     [0, 1].forEach(i => { $('b' + i).src = `index.html?board=1&theme=${encodeURIComponent(theme.id)}`; });
   });
+  new ResizeObserver(() => { refit = true; }).observe($('boards'));
   requestAnimationFrame(frame);
   startPhones();
   try { const r = await fetch('/api/ping', { cache: 'no-store' }); S.available = r.ok; } catch (e) { /* static hosting: one computer only */ }
